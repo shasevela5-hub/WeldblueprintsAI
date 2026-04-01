@@ -1,0 +1,77 @@
+{
+  "users": [
+    {
+      "id": 1774028179090,
+      "username": "shasevela555",
+      "email": "shasevela5@gmail.com",
+      "password": "$2b$10$PW2z8/yFN9ZkuG1ECVsiTeLHqkT9n1kjCQA9A5zsx414hx341IFtO",
+      "welderModel": "",
+      "experience": "Professional",
+      "createdAt": "2026-03-20T17:36:19.090Z",
+      "savedProjects": [],
+      "savedSettings": [],
+      "favorites": [],
+      "generationsUsed": 3
+    },
+    {
+      "id": 1,
+      "username": "Admin",
+      "email": "admin@weldblueprints.ai",
+      "password": "$2b$10$zDC9nHE3RVKPXvXhwRHXl.JVsgntE7QB3x1fpAtGb258b9O9zoDTK",
+      "isAdmin": true,
+      "isPro": true,
+      "welderModel": "All",
+      "experience": "Expert",
+      "createdAt": "2026-03-22T22:29:27.095Z",
+      "generationsUsed": 0,
+      "savedProjects": [
+        1774218735560
+      ],
+      "savedSettings": [],
+      "favorites": []
+    },
+    {
+      "id": 1774475245134,
+      "username": "Admin",
+      "email": "admin@example.com",
+      "password": "$2b$10$/k6OONta/CMIN4zoZcvcY.80pP.a6eo/YViYCgorq7ctwFE.bg7/O",
+      "isAdmin": true,
+      "isPro": true,
+      "welderModel": "All",
+      "experience": "Expert",
+      "createdAt": "2026-03-25T21:47:25.134Z",
+      "generationsUsed": 0,
+      "savedProjects": [],
+      "savedSettings": [],
+      "favorites": []
+    },
+    {
+      "id": 1775000933078,
+      "username": "Admin",
+      "email": "admin@yourdomain.com",
+      "password": "$2b$10$QsYDlTQ2eU1SdN0DXk22W.iEE95jS0RGB5.hXKBKorO3311vJELpq",
+      "isAdmin": true,
+      "isPro": true,
+      "welderModel": "All",
+      "experience": "Expert",
+      "createdAt": "2026-03-31T23:48:53.078Z",
+      "generationsUsed": 0,
+      "savedProjects": [],
+      "savedSettings": [],
+      "favorites": []
+    }
+  ],
+  "savedProjects": [
+    {
+      "id": 1774218735560,
+      "userId": 1,
+      "project": "Floating Wall Shelves",
+      "dimensions": "36x24x34",
+      "welder": "Lincoln 210 MP",
+      "process": "MIG",
+      "notes": null,
+      "savedAt": "2026-03-22T22:32:15.560Z"
+    }
+  ],
+  "savedSettings": []
+}

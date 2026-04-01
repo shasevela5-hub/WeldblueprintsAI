@@ -1,0 +1,18 @@
+{
+  "totals": {
+    "page_view_home": 7,
+    "page_view_pricing": 2,
+    "page_view_login": 1,
+    "generate_click": 16,
+    "generate_success": 9
+  },
+  "daily": {
+    "2026-04-01": {
+      "page_view_home": 7,
+      "page_view_pricing": 2,
+      "page_view_login": 1,
+      "generate_click": 16,
+      "generate_success": 9
+    }
+  }
+}

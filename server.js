@@ -1,4 +1,4 @@
-﻿require("dotenv").config()
+require("dotenv").config()
 
 const express = require("express")
 const cors = require("cors")
@@ -37,6 +37,9 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(__dirname))
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"))
+})
 const sessionDir = path.join(__dirname, "sessions")
 function buildSessionStore() {
   if (SESSION_STORE === "file") {
@@ -496,12 +499,12 @@ function analyzeScrap(scrapList) {
   const hasAngle = scrap.includes("angle") || scrap.includes("iron")
   const hasChannel = scrap.includes("channel") || scrap.includes("unistrut")
 
-  if (hasTube && hasCasters) suggestions.push({ name: "Welding Cart", confidence: "95%", materials: "Tubing for frame and casters", image: "ðŸ›’", time: "4 hours" })
-  if (hasTube && hasPlate) suggestions.push({ name: "Shop Workbench", confidence: "88%", materials: "Tube frame and plate top", image: "ðŸ”¨", time: "6 hours" })
-  if (hasPlate) suggestions.push({ name: "Fire Pit", confidence: "92%", materials: "Plate for sides", image: "ðŸ”¥", time: "3 hours" })
-  if (hasTube && hasAngle) suggestions.push({ name: "Metal Shelving Unit", confidence: "85%", materials: "Tube uprights and angle supports", image: "ðŸ—„ï¸", time: "4 hours" })
-  if (hasRound) suggestions.push({ name: "Planter Stand", confidence: "81%", materials: "Rod and tube stock", image: "ðŸŒ¿", time: "2 hours" })
-  if (hasTube && hasChannel) suggestions.push({ name: "Welding Table", confidence: "82%", materials: "Tube frame and channel edging", image: "ðŸ—œï¸", time: "8 hours" })
+  if (hasTube && hasCasters) suggestions.push({ name: "Welding Cart", confidence: "95%", materials: "Tubing for frame and casters", image: "🛒", time: "4 hours" })
+  if (hasTube && hasPlate) suggestions.push({ name: "Shop Workbench", confidence: "88%", materials: "Tube frame and plate top", image: "🔨", time: "6 hours" })
+  if (hasPlate) suggestions.push({ name: "Fire Pit", confidence: "92%", materials: "Plate for sides", image: "🔥", time: "3 hours" })
+  if (hasTube && hasAngle) suggestions.push({ name: "Metal Shelving Unit", confidence: "85%", materials: "Tube uprights and angle supports", image: "🗄️", time: "4 hours" })
+  if (hasRound) suggestions.push({ name: "Planter Stand", confidence: "81%", materials: "Rod and tube stock", image: "🌿", time: "2 hours" })
+  if (hasTube && hasChannel) suggestions.push({ name: "Welding Table", confidence: "82%", materials: "Tube frame and channel edging", image: "🗜️", time: "8 hours" })
 
   return suggestions.slice(0, 4)
 }
@@ -1083,647 +1086,182 @@ function drawBlueprint(doc, payload) {
 
   const pageWidth = 1190
   const pageHeight = 842
+  const colors = { paper: "#EFE2C8", grid: "#DCE7E0", ink: "#556A78", inkBold: "#3B4F5B", note: "#627684" }
 
-  const colors = {
-    bg: "#08131F",
-    panel: "#102033",
-    line: "#5AAEF0",
-    text: "#F5F7FA",
-    mute: "#A6BACD",
-    accent: "#FF8A3D",
-    warn: "#FFD166"
+  doc.rect(0, 0, pageWidth, pageHeight).fill(colors.paper)
+  for (let x = 0; x <= pageWidth; x += 36) doc.moveTo(x, 0).lineTo(x, pageHeight).strokeColor(colors.grid).lineWidth(0.5).stroke()
+  for (let y = 0; y <= pageHeight; y += 36) doc.moveTo(0, y).lineTo(pageWidth, y).strokeColor(colors.grid).lineWidth(0.5).stroke()
+
+  doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(52).text(project.toUpperCase(), 0, 22, { width: pageWidth, align: "center" })
+  doc.fillColor(colors.ink).font("Helvetica-BoldOblique").fontSize(20).text("BROUGHT TO YOU BY WELDBLUEPRINTS AI", 0, 82, { width: pageWidth, align: "center" })
+
+  function iso(x, y, z, sx, sy, sz, ox, oy) {
+    return { x: ox + (x - y) * sx, y: oy + (x + y) * sy - z * sz }
+  }
+  function line(p1, p2, w = 1.3, c = colors.inkBold) {
+    doc.moveTo(p1.x, p1.y).lineTo(p2.x, p2.y).strokeColor(c).lineWidth(w).stroke()
+  }
+  function dim(p1, p2, label, dx = 0, dy = 0) {
+    const a = { x: p1.x + dx, y: p1.y + dy }
+    const b = { x: p2.x + dx, y: p2.y + dy }
+    line(a, b, 0.8, colors.ink)
+    const vx = b.x - a.x
+    const vy = b.y - a.y
+    const len = Math.max(1, Math.hypot(vx, vy))
+    const nx = vx / len
+    const ny = vy / len
+    const ax = -ny
+    const ay = nx
+    const s = 5
+    doc.polygon([a.x, a.y], [a.x + nx * 8 + ax * s * 0.6, a.y + ny * 8 + ay * s * 0.6], [a.x + nx * 8 - ax * s * 0.6, a.y + ny * 8 - ay * s * 0.6]).fill(colors.ink)
+    doc.polygon([b.x, b.y], [b.x - nx * 8 + ax * s * 0.6, b.y - ny * 8 + ay * s * 0.6], [b.x - nx * 8 - ax * s * 0.6, b.y - ny * 8 - ay * s * 0.6]).fill(colors.ink)
+    const tx = (a.x + b.x) / 2 + ax * 12
+    const ty = (a.y + b.y) / 2 + ay * 12
+    doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(18).text(label, tx - 22, ty - 9, { width: 44, align: "center" })
   }
 
-  doc.rect(0, 0, pageWidth, pageHeight).fill(colors.bg)
-
-  for (let x = 0; x <= pageWidth; x += 28) {
-    doc.moveTo(x, 0).lineTo(x, pageHeight).strokeColor("rgba(255,255,255,0.04)").lineWidth(0.5).stroke()
-  }
-  for (let y = 0; y <= pageHeight; y += 28) {
-    doc.moveTo(0, y).lineTo(pageWidth, y).strokeColor("rgba(255,255,255,0.04)").lineWidth(0.5).stroke()
-  }
-
-  doc.rect(0, 0, pageWidth, 58).fill(colors.panel)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(22).text("WELDBLUEPRINTS AI", 28, 18)
-  doc.fillColor(colors.accent).font("Helvetica-Bold").fontSize(18).text(project.toUpperCase(), 0, 18, { align: "center", width: pageWidth })
-
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(8)
-  doc.text(`Dims: ${L}" x ${W}" x ${H}"`, pageWidth - 260, 12)
-  doc.text(`Welder: ${welder}`, pageWidth - 260, 24)
-  doc.text(`Process: ${process} / ${wire} ${wiresize}`, pageWidth - 260, 36)
-
-  const leftX = 24
-  const leftY = 84
-  const leftW = 720
-  const leftH = 700
-
-  const rightX = 762
-  const rightY = 84
-  const rightW = 404
-  const rightH = 700
-
-  doc.roundedRect(leftX, leftY, leftW, leftH, 14).strokeColor("#28425B").lineWidth(1).stroke()
-  doc.roundedRect(rightX, rightY, rightW, rightH, 14).strokeColor("#28425B").lineWidth(1).stroke()
-
-  function header(x, y, w, title) {
-    doc.roundedRect(x, y, w, 26, 10).fill(colors.panel)
-    doc.fillColor(colors.warn).font("Helvetica-Bold").fontSize(10).text(title.toUpperCase(), x + 12, y + 8)
-  }
-
-  const frontBox = { x: 42, y: 132, w: 320, h: 240 }
-  const topBox = { x: 42, y: 410, w: 320, h: 180 }
-  const sideBox = { x: 392, y: 132, w: 180, h: 240 }
-  const isoBox = { x: 392, y: 410, w: 300, h: 240 }
-
-  header(frontBox.x, frontBox.y - 34, frontBox.w, "Front Elevation")
-  header(topBox.x, topBox.y - 34, topBox.w, "Top View")
-  header(sideBox.x, sideBox.y - 34, sideBox.w, "Side View")
-  header(isoBox.x, isoBox.y - 34, isoBox.w, "Isometric")
-
-  function fitScale(boxW, boxH, actualW, actualH) {
-    return Math.min((boxW - 40) / actualW, (boxH - 40) / actualH)
-  }
-
-  const frontScale = fitScale(frontBox.w, frontBox.h, L, H)
-  const topScale = fitScale(topBox.w, topBox.h, L, W)
-  const sideScale = fitScale(sideBox.w, sideBox.h, W, H)
-  const scale = Math.min(frontScale, topScale, sideScale)
-
-  function drawProjectView(box, actualW, actualH, style, viewName) {
-    const w = actualW * scale
-    const h = actualH * scale
-    const x = box.x + (box.w - w) / 2
-    const y = box.y + (box.h - h) / 2
-    const leg = Math.max(6, scale * 1.5)
-
-    doc.rect(x, y, w, h).strokeColor(colors.line).lineWidth(2).stroke()
-    if (style === "trailer") {
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      const members = 5
-      for (let i = 1; i < members; i += 1) {
-        const mx = x + (w / members) * i
-        doc.moveTo(mx, y + leg).lineTo(mx, y + h - leg).strokeColor(colors.line).lineWidth(1.1).stroke()
-      }
-      if (viewName === "side") {
-        const wheelR = Math.max(10, leg * 1.4)
-        doc.circle(x + w * 0.28, y + h + wheelR * 0.4, wheelR).strokeColor(colors.line).lineWidth(1.2).stroke()
-        doc.circle(x + w * 0.72, y + h + wheelR * 0.4, wheelR).strokeColor(colors.line).lineWidth(1.2).stroke()
-      }
-    } else if (style === "pit") {
-      const wall = Math.max(8, leg * 1.6)
-      doc.rect(x, y, w, wall).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - wall, w, wall).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y, wall, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - wall, y, wall, h).fillAndStroke("#17314B", colors.line)
-      doc.moveTo(x + wall, y + h * 0.5).lineTo(x + w - wall, y + h * 0.5).strokeColor(colors.line).lineWidth(1.0).stroke()
-    } else if (style === "gate") {
-      const pickets = 6
-      for (let i = 1; i < pickets; i += 1) {
-        const px = x + (w / pickets) * i
-        doc.moveTo(px, y + leg).lineTo(px, y + h - leg).strokeColor(colors.line).lineWidth(1.1).stroke()
-      }
-      doc.moveTo(x + leg, y + h - leg).lineTo(x + w - leg, y + leg).strokeColor(colors.line).lineWidth(1.2).stroke()
-    } else if (style === "furniture") {
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + leg, y + h * 0.32, w - leg * 2, Math.max(4, leg * 0.7)).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.moveTo(x + leg, y + h - leg).lineTo(x + w - leg, y + leg).strokeColor(colors.line).lineWidth(1).stroke()
-    } else if (style === "shelf") {
-      doc.rect(x, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - leg, y, leg, h).fillAndStroke("#17314B", colors.line)
-      const levels = 4
-      for (let i = 1; i < levels; i += 1) {
-        const sy = y + (h / levels) * i
-        doc.moveTo(x + leg, sy).lineTo(x + w - leg, sy).strokeColor(colors.line).lineWidth(1.1).stroke()
-      }
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-    } else if (style === "struct") {
-      const col = Math.max(8, leg * 1.8)
-      doc.rect(x, y, col, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - col, y, col, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y, w, col).fillAndStroke("#17314B", colors.line)
-      if (h > col * 2) {
-        doc.rect(x + col, y + h * 0.35, w - col * 2, Math.max(5, leg)).fillAndStroke("#17314B", colors.line)
-        doc.rect(x + col, y + h * 0.65, w - col * 2, Math.max(5, leg)).fillAndStroke("#17314B", colors.line)
-      }
-      doc.moveTo(x + col, y + h - leg).lineTo(x + w - col, y + col).strokeColor(colors.line).lineWidth(1.1).stroke()
-    } else if (style === "hoist") {
-      const mast = Math.max(10, leg * 2)
-      const boomY = y + h * 0.22
-      const baseY = y + h - leg
-      const mastX = x + w * 0.5 - mast / 2
-
-      // H-base
-      doc.rect(x + w * 0.15, baseY, w * 0.7, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.2, baseY - leg * 1.8, leg, leg * 1.8).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.8 - leg, baseY - leg * 1.8, leg, leg * 1.8).fillAndStroke("#17314B", colors.line)
-
-      // Mast
-      doc.rect(mastX, y + h * 0.18, mast, h * 0.72).fillAndStroke("#17314B", colors.line)
-
-      // Boom and brace
-      doc.moveTo(mastX + mast, boomY).lineTo(x + w * 0.88, y + h * 0.08).strokeColor(colors.line).lineWidth(3).stroke()
-      doc.moveTo(mastX, y + h * 0.45).lineTo(x + w * 0.32, baseY).strokeColor(colors.line).lineWidth(1.4).stroke()
-
-      // Hook chain
-      doc.moveTo(x + w * 0.88, y + h * 0.08).lineTo(x + w * 0.88, y + h * 0.24).strokeColor(colors.warn).lineWidth(1.1).stroke()
-      doc.circle(x + w * 0.88, y + h * 0.26, Math.max(3, leg * 0.4)).strokeColor(colors.warn).lineWidth(1).stroke()
-    } else if (style === "cage") {
-      const lwMain = 2.2
-      const lwSec = 1.4
-      if (viewName === "front") {
-        // Main hoop front view
-        doc.moveTo(x + w * 0.2, y + h).lineTo(x + w * 0.2, y + h * 0.34).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        doc.moveTo(x + w * 0.8, y + h).lineTo(x + w * 0.8, y + h * 0.34).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        doc.moveTo(x + w * 0.2, y + h * 0.34).lineTo(x + w * 0.5, y + h * 0.12).lineTo(x + w * 0.8, y + h * 0.34).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        // Shoulder and diagonal bars
-        doc.moveTo(x + w * 0.28, y + h * 0.58).lineTo(x + w * 0.72, y + h * 0.58).strokeColor(colors.line).lineWidth(lwSec).stroke()
-        doc.moveTo(x + w * 0.27, y + h * 0.86).lineTo(x + w * 0.73, y + h * 0.42).strokeColor(colors.line).lineWidth(lwSec).stroke()
-      } else if (viewName === "side") {
-        // Side profile hoop and rear brace
-        doc.moveTo(x + w * 0.18, y + h).lineTo(x + w * 0.18, y + h * 0.44).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        doc.moveTo(x + w * 0.62, y + h).lineTo(x + w * 0.62, y + h * 0.38).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        doc.moveTo(x + w * 0.18, y + h * 0.44).lineTo(x + w * 0.42, y + h * 0.2).lineTo(x + w * 0.62, y + h * 0.38).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        doc.moveTo(x + w * 0.62, y + h * 0.42).lineTo(x + w * 0.9, y + h * 0.62).strokeColor(colors.line).lineWidth(lwSec).stroke()
-        doc.moveTo(x + w * 0.22, y + h * 0.75).lineTo(x + w * 0.58, y + h * 0.48).strokeColor(colors.line).lineWidth(lwSec).stroke()
-      } else {
-        // Top view: perimeter + roof cross bars
-        doc.rect(x + w * 0.16, y + h * 0.2, w * 0.68, h * 0.58).strokeColor(colors.line).lineWidth(lwMain).stroke()
-        doc.moveTo(x + w * 0.3, y + h * 0.22).lineTo(x + w * 0.3, y + h * 0.76).strokeColor(colors.line).lineWidth(lwSec).stroke()
-        doc.moveTo(x + w * 0.5, y + h * 0.22).lineTo(x + w * 0.5, y + h * 0.76).strokeColor(colors.line).lineWidth(lwSec).stroke()
-        doc.moveTo(x + w * 0.7, y + h * 0.22).lineTo(x + w * 0.7, y + h * 0.76).strokeColor(colors.line).lineWidth(lwSec).stroke()
-        doc.moveTo(x + w * 0.18, y + h * 0.49).lineTo(x + w * 0.82, y + h * 0.49).strokeColor(colors.line).lineWidth(1).stroke()
-      }
-    } else if (style === "railing") {
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      const balusters = 8
-      for (let i = 1; i < balusters; i += 1) {
-        const bx = x + (w / balusters) * i
-        doc.moveTo(bx, y + leg).lineTo(bx, y + h - leg).strokeColor(colors.line).lineWidth(1.1).stroke()
-      }
-    } else if (style === "greenhouse") {
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      const bays = 6
-      for (let i = 0; i <= bays; i += 1) {
-        const bx = x + (w / bays) * i
-        doc.moveTo(bx, y + h - leg).lineTo(bx, y + h * 0.32).strokeColor(colors.line).lineWidth(1).stroke()
-      }
-      doc.moveTo(x, y + h * 0.32).lineTo(x + w * 0.5, y + h * 0.08).lineTo(x + w, y + h * 0.32).strokeColor(colors.line).lineWidth(1.8).stroke()
-    } else if (style === "mezzanine") {
-      const col = Math.max(8, leg * 1.6)
-      doc.rect(x, y + h * 0.25, col, h * 0.75).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - col, y + h * 0.25, col, h * 0.75).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h * 0.25, w, col).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + col, y + h * 0.52, w - col * 2, Math.max(5, leg)).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + col, y + h * 0.74, w - col * 2, Math.max(5, leg * 0.8)).fillAndStroke("#17314B", colors.line)
-    } else if (style === "carport" || style === "pergola") {
-      const post = Math.max(8, leg * 1.5)
-      doc.rect(x, y + h * 0.2, post, h * 0.8).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - post, y + h * 0.2, post, h * 0.8).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h * 0.2, w, post).fillAndStroke("#17314B", colors.line)
-      if (style === "carport") {
-        doc.moveTo(x, y + h * 0.2).lineTo(x + w * 0.5, y + h * 0.02).lineTo(x + w, y + h * 0.2).strokeColor(colors.line).lineWidth(1.5).stroke()
-      } else {
-        const rafters = 5
-        for (let i = 1; i < rafters; i += 1) {
-          const rx = x + (w / rafters) * i
-          doc.moveTo(rx, y + h * 0.2).lineTo(rx, y + h * 0.35).strokeColor(colors.line).lineWidth(1).stroke()
-        }
-      }
-    } else if (style === "planter") {
-      const wall = Math.max(8, leg * 1.5)
-      doc.rect(x, y + h - wall, w, wall).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h * 0.25, wall, h * 0.75).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - wall, y + h * 0.25, wall, h * 0.75).fillAndStroke("#17314B", colors.line)
-      doc.moveTo(x + wall, y + h * 0.55).lineTo(x + w - wall, y + h * 0.55).strokeColor(colors.line).lineWidth(1).stroke()
-    } else if (style === "flatbed") {
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg * 2.6, w, leg).fillAndStroke("#17314B", colors.line)
-      const cross = 7
-      for (let i = 1; i < cross; i += 1) {
-        const cx = x + (w / cross) * i
-        doc.moveTo(cx, y + h - leg * 2.6).lineTo(cx, y + h - leg).strokeColor(colors.line).lineWidth(1).stroke()
-      }
-    } else if (style === "rack") {
-      const post = Math.max(8, leg * 1.4)
-      doc.rect(x, y + h * 0.2, post, h * 0.8).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - post, y + h * 0.2, post, h * 0.8).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h * 0.2, w, post).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h * 0.6, w, post * 0.85).fillAndStroke("#17314B", colors.line)
-    } else if (style === "bookshelf" || style === "winerack") {
-      doc.rect(x, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - leg, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      const shelves = style === "bookshelf" ? 5 : 4
-      for (let i = 1; i < shelves; i += 1) {
-        const sy = y + (h / shelves) * i
-        doc.moveTo(x + leg, sy).lineTo(x + w - leg, sy).strokeColor(colors.line).lineWidth(1.1).stroke()
-      }
-      if (style === "winerack") {
-        for (let i = 1; i <= 3; i += 1) {
-          const yy = y + (h * i) / 4
-          doc.moveTo(x + w * 0.25, yy).lineTo(x + w * 0.75, yy).strokeColor(colors.warn).lineWidth(0.9).stroke()
-        }
-      }
-    } else if (style === "sculpture") {
-      doc.rect(x + w * 0.18, y + h - leg, w * 0.64, leg).fillAndStroke("#17314B", colors.line)
-      doc.moveTo(x + w * 0.28, y + h - leg).lineTo(x + w * 0.44, y + h * 0.18).strokeColor(colors.line).lineWidth(1.7).stroke()
-      doc.moveTo(x + w * 0.44, y + h * 0.18).lineTo(x + w * 0.68, y + h * 0.36).strokeColor(colors.line).lineWidth(1.7).stroke()
-      doc.circle(x + w * 0.52, y + h * 0.14, Math.max(5, leg * 0.8)).strokeColor(colors.warn).lineWidth(1).stroke()
-    } else if (style === "murphy") {
-      // Wall frame + fold-down bed panel geometry
-      const rail = Math.max(8, leg * 1.3)
-      const panelW = w * 0.56
-      const panelH = h * 0.72
-      const panelX = x + w * 0.36
-      const panelY = y + h * 0.2
-      const pivotY = y + h * 0.83
-
-      // Wall frame
-      doc.rect(x + w * 0.04, y + h * 0.08, rail, h * 0.84).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.04, y + h * 0.08, w * 0.28, rail).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.04, y + h * 0.92 - rail, w * 0.28, rail).fillAndStroke("#17314B", colors.line)
-
-      // Bed frame panel (shown tilted in side/front)
-      doc.rect(panelX, panelY, panelW, panelH).strokeColor(colors.line).lineWidth(1.6).stroke()
-      doc.moveTo(panelX + panelW * 0.15, panelY + panelH * 0.18).lineTo(panelX + panelW * 0.85, panelY + panelH * 0.82).strokeColor(colors.line).lineWidth(1).stroke()
-      doc.moveTo(panelX + panelW * 0.15, panelY + panelH * 0.82).lineTo(panelX + panelW * 0.85, panelY + panelH * 0.18).strokeColor(colors.line).lineWidth(1).stroke()
-
-      // Pivot points
-      doc.circle(panelX + 4, pivotY, Math.max(3, rail * 0.32)).fillAndStroke(colors.warn, colors.line)
-      doc.circle(panelX + panelW - 4, pivotY, Math.max(3, rail * 0.32)).fillAndStroke(colors.warn, colors.line)
-    } else if (style === "wallshelf") {
-      const plateW = Math.max(10, leg * 1.4)
-      // Wall plates
-      doc.rect(x + w * 0.08, y + h * 0.18, plateW, h * 0.64).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.46, y + h * 0.18, plateW, h * 0.64).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.84, y + h * 0.18, plateW, h * 0.64).fillAndStroke("#17314B", colors.line)
-      // Hidden arms
-      ;[0.08, 0.46, 0.84].forEach(pos => {
-        const ax = x + w * pos + plateW
-        doc.moveTo(ax, y + h * 0.35).lineTo(x + w * 0.97, y + h * 0.35).strokeColor(colors.line).lineWidth(1.6).stroke()
-        doc.moveTo(ax, y + h * 0.6).lineTo(x + w * 0.97, y + h * 0.6).strokeColor(colors.line).lineWidth(1.6).stroke()
-      })
-      // Shelf body
-      doc.rect(x + w * 0.18, y + h * 0.28, w * 0.76, h * 0.44).strokeColor(colors.warn).lineWidth(1).stroke()
-    } else if (style === "lift") {
-      const topY = y + h * 0.28
-      const botY = y + h * 0.8
-      const left = x + w * 0.14
-      const right = x + w * 0.86
-      const armW = Math.max(3, leg * 0.35)
-
-      // Top and bottom decks
-      doc.rect(left, topY, right - left, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(left, botY, right - left, leg).fillAndStroke("#17314B", colors.line)
-      // Scissor arms
-      doc.moveTo(left + armW, botY).lineTo(right - armW, topY + leg).strokeColor(colors.line).lineWidth(1.8).stroke()
-      doc.moveTo(right - armW, botY).lineTo(left + armW, topY + leg).strokeColor(colors.line).lineWidth(1.8).stroke()
-      // Pivot
-      doc.circle((left + right) / 2, (topY + botY) / 2, Math.max(4, armW * 1.4)).strokeColor(colors.warn).lineWidth(1).stroke()
-    } else if (style === "outdoor") {
-      const wall = Math.max(7, leg * 1.3)
-      doc.rect(x, y + h - wall, w, wall).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y, wall, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - wall, y, wall, h).fillAndStroke("#17314B", colors.line)
-      if (viewName === "top") {
-        const slats = 5
-        for (let i = 1; i < slats; i += 1) {
-          const sx = x + (w / slats) * i
-          doc.moveTo(sx, y + wall).lineTo(sx, y + h - wall).strokeColor(colors.line).lineWidth(0.9).stroke()
-        }
-      } else {
-        doc.rect(x + wall, y + h * 0.4, w - wall * 2, Math.max(4, leg * 0.6)).fillAndStroke("#17314B", colors.line)
-      }
-    } else if (style === "table") {
-      const topThk = Math.max(8, leg * 1.2)
-      doc.rect(x, y, w, topThk).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, leg, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - leg, y + h - leg, leg, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + leg, y + h * 0.45, w - leg * 2, Math.max(4, leg * 0.7)).fillAndStroke("#17314B", colors.line)
-    } else if (style === "decor") {
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      const stems = 5
-      for (let i = 0; i < stems; i += 1) {
-        const sx = x + (w / (stems + 1)) * (i + 1)
-        const sh = h * (0.35 + (i % 2) * 0.25)
-        doc.moveTo(sx, y + h - leg).lineTo(sx, y + h - sh).strokeColor(colors.line).lineWidth(1.4).stroke()
-      }
-      doc.moveTo(x + leg, y + h * 0.4).lineTo(x + w - leg, y + h * 0.55).strokeColor(colors.line).lineWidth(0.9).stroke()
-    } else if (style === "cart") {
-      doc.rect(x, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - leg, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w * 0.72, y + h * 0.28, Math.max(8, leg * 1.2), h * 0.44).strokeColor(colors.line).lineWidth(1.1).stroke()
-    } else {
-      doc.rect(x, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x + w - leg, y, leg, h).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y, w, leg).fillAndStroke("#17314B", colors.line)
-      doc.rect(x, y + h - leg, w, leg).fillAndStroke("#17314B", colors.line)
-      if (h > 70) {
-        doc.moveTo(x + leg, y + h * 0.42).lineTo(x + w - leg, y + h * 0.42).strokeColor(colors.line).lineWidth(1.2).stroke()
-      }
-    }
-
-    doc.fillColor(colors.warn).font("Helvetica-Bold").fontSize(9)
-    doc.text(`${actualW}"`, x + w / 2 - 18, y + h + 8)
-    doc.text(`${actualH}"`, x - 24, y + h / 2 - 4)
-  }
-
+  const rightX = 380
+  const rightW = 770
   const style = getProjectStyle(project)
-  drawProjectView(frontBox, L, H, style, "front")
-  drawProjectView(topBox, L, W, style, "top")
-  drawProjectView(sideBox, W, H, style, "side")
+  const scale = Math.min(8.6, (rightW - 170) / Math.max(1, L + W))
+  const sx = scale * 0.9
+  const sy = scale * 0.36
+  const sz = scale
+  const ox = rightX + 210
+  const oy = 690
 
-  const isoBaseX = isoBox.x + 70
-  const isoBaseY = isoBox.y + 170
-  const isoScale = Math.min(isoBox.w / (L + W + 60), isoBox.h / (H + 60)) * 0.7
+  const topThk = Math.max(1.5, Math.min(6, H * 0.07))
+  const shelfZ = Math.max(5, H * 0.3)
+  const inset = Math.max(2, Math.min(6, Math.min(L, W) * 0.06))
 
-  function p3(x, y, z) {
-    return {
-      x: isoBaseX + (x - y) * 0.86 * isoScale,
-      y: isoBaseY + (x + y) * 0.35 * isoScale - z * isoScale
+  const A = iso(0, 0, 0, sx, sy, sz, ox, oy)
+  const B = iso(L, 0, 0, sx, sy, sz, ox, oy)
+  const C = iso(L, W, 0, sx, sy, sz, ox, oy)
+  const D = iso(0, W, 0, sx, sy, sz, ox, oy)
+  const E = iso(0, 0, H, sx, sy, sz, ox, oy)
+  const F = iso(L, 0, H, sx, sy, sz, ox, oy)
+  const G = iso(L, W, H, sx, sy, sz, ox, oy)
+  const H1 = iso(0, W, H, sx, sy, sz, ox, oy)
+  const E2 = iso(0, 0, H + topThk, sx, sy, sz, ox, oy)
+  const F2 = iso(L, 0, H + topThk, sx, sy, sz, ox, oy)
+  const G2 = iso(L, W, H + topThk, sx, sy, sz, ox, oy)
+  const H2 = iso(0, W, H + topThk, sx, sy, sz, ox, oy)
+  const SA = iso(inset, inset, shelfZ, sx, sy, sz, ox, oy)
+  const SB = iso(L - inset, inset, shelfZ, sx, sy, sz, ox, oy)
+  const SC = iso(L - inset, W - inset, shelfZ, sx, sy, sz, ox, oy)
+  const SD = iso(inset, W - inset, shelfZ, sx, sy, sz, ox, oy)
+
+  // Base envelope lines
+  line(A, B, 2.2); line(B, C, 2.2); line(C, D, 2.2); line(D, A, 2.2)
+  line(A, E, 2.2); line(B, F, 2.2); line(C, G, 2.2); line(D, H1, 2.2)
+  line(E, F, 2.0); line(F, G, 2.0); line(G, H1, 2.0); line(H1, E, 2.0)
+  line(E2, F2, 1.8); line(F2, G2, 1.8); line(G2, H2, 1.8); line(H2, E2, 1.8)
+  line(E, E2, 1.0); line(F, F2, 1.0); line(G, G2, 1.0); line(H1, H2, 1.0)
+
+  if (["table", "shelf", "furniture", "frame", "cart"].includes(style)) {
+    line(SA, SB, 1.4); line(SB, SC, 1.4); line(SC, SD, 1.4); line(SD, SA, 1.4)
+    for (let i = 0; i <= 8; i += 1) {
+      const t = i / 8
+      const p1 = { x: SA.x + (SD.x - SA.x) * t, y: SA.y + (SD.y - SA.y) * t }
+      const p2 = { x: SB.x + (SC.x - SB.x) * t, y: SB.y + (SC.y - SB.y) * t }
+      line(p1, p2, 0.75, colors.ink)
     }
-  }
-
-  const A = p3(0, 0, 0)
-  const B = p3(L, 0, 0)
-  const C = p3(L, W, 0)
-  const D = p3(0, W, 0)
-  const E = p3(0, 0, H)
-  const F = p3(L, 0, H)
-  const G = p3(L, W, H)
-  const H1 = p3(0, W, H)
-
-  doc.moveTo(A.x, A.y).lineTo(B.x, B.y).lineTo(C.x, C.y).lineTo(D.x, D.y).closePath().strokeColor(colors.line).lineWidth(2).stroke()
-  doc.moveTo(E.x, E.y).lineTo(F.x, F.y).lineTo(G.x, G.y).lineTo(H1.x, H1.y).closePath().strokeColor(colors.line).lineWidth(2).stroke()
-  doc.moveTo(A.x, A.y).lineTo(E.x, E.y).strokeColor(colors.line).lineWidth(2).stroke()
-  doc.moveTo(B.x, B.y).lineTo(F.x, F.y).strokeColor(colors.line).lineWidth(2).stroke()
-  doc.moveTo(C.x, C.y).lineTo(G.x, G.y).strokeColor(colors.line).lineWidth(2).stroke()
-  doc.moveTo(D.x, D.y).lineTo(H1.x, H1.y).strokeColor(colors.line).lineWidth(2).stroke()
-
-  // Style-specific iso details so different projects are visually distinct
-  if (style === "trailer") {
-    const wheelR = Math.max(8, isoScale * 6)
-    doc.circle((A.x + B.x) / 2 - 40, A.y + 20, wheelR).strokeColor(colors.line).lineWidth(1.2).stroke()
-    doc.circle((A.x + B.x) / 2 + 40, A.y + 20, wheelR).strokeColor(colors.line).lineWidth(1.2).stroke()
-  } else if (style === "pit") {
-    doc.moveTo(E.x + 10, E.y + 6).lineTo(F.x - 10, F.y + 6).strokeColor(colors.warn).lineWidth(1.1).stroke()
-    doc.moveTo(H1.x + 8, H1.y + 4).lineTo(G.x - 8, G.y + 4).strokeColor(colors.warn).lineWidth(1.1).stroke()
-  } else if (style === "gate") {
-    doc.moveTo(A.x, A.y).lineTo(F.x, F.y).strokeColor(colors.line).lineWidth(1.1).stroke()
-    doc.moveTo(B.x, B.y).lineTo(E.x, E.y).strokeColor(colors.line).lineWidth(1.1).stroke()
-  } else if (style === "struct") {
-    const mid1 = p3(0, 0, H * 0.35)
-    const mid2 = p3(L, W, H * 0.35)
-    const mid3 = p3(0, 0, H * 0.7)
-    const mid4 = p3(L, W, H * 0.7)
-    doc.moveTo(mid1.x, mid1.y).lineTo(mid2.x, mid2.y).strokeColor(colors.line).lineWidth(1).stroke()
-    doc.moveTo(mid3.x, mid3.y).lineTo(mid4.x, mid4.y).strokeColor(colors.line).lineWidth(1).stroke()
+    for (let i = 0; i <= 8; i += 1) {
+      const t = i / 8
+      const p1 = { x: SA.x + (SB.x - SA.x) * t, y: SA.y + (SB.y - SA.y) * t }
+      const p2 = { x: SD.x + (SC.x - SD.x) * t, y: SD.y + (SC.y - SD.y) * t }
+      line(p1, p2, 0.75, colors.ink)
+    }
+  } else if (style === "trailer" || style === "flatbed" || style === "rack") {
+    for (let i = 1; i < 7; i += 1) {
+      const t = i / 7
+      const p1 = iso(L * t, 0, H * 0.08, sx, sy, sz, ox, oy)
+      const p2 = iso(L * t, W, H * 0.08, sx, sy, sz, ox, oy)
+      line(p1, p2, 1.0, colors.ink)
+    }
+    const wheel1 = iso(L * 0.28, -W * 0.05, 0, sx, sy, sz, ox, oy)
+    const wheel2 = iso(L * 0.72, -W * 0.05, 0, sx, sy, sz, ox, oy)
+    doc.circle(wheel1.x, wheel1.y + 20, 14).strokeColor(colors.inkBold).lineWidth(1.2).stroke()
+    doc.circle(wheel2.x, wheel2.y + 20, 14).strokeColor(colors.inkBold).lineWidth(1.2).stroke()
   } else if (style === "hoist") {
-    const mastTop = p3(L * 0.5, W * 0.5, H)
-    const boomTip = p3(L * 0.95, W * 0.25, H * 0.95)
-    const chainTop = p3(L * 0.95, W * 0.25, H * 0.95)
-    const chainBottom = p3(L * 0.95, W * 0.25, H * 0.62)
-    const brace1 = p3(L * 0.5, W * 0.5, H * 0.45)
-    const brace2 = p3(L * 0.28, W * 0.2, H * 0.12)
-
-    doc.moveTo(mastTop.x, mastTop.y).lineTo(boomTip.x, boomTip.y).strokeColor(colors.line).lineWidth(1.6).stroke()
-    doc.moveTo(chainTop.x, chainTop.y).lineTo(chainBottom.x, chainBottom.y).strokeColor(colors.warn).lineWidth(1.1).stroke()
-    doc.circle(chainBottom.x, chainBottom.y + 3, 3).strokeColor(colors.warn).lineWidth(1).stroke()
-    doc.moveTo(brace1.x, brace1.y).lineTo(brace2.x, brace2.y).strokeColor(colors.line).lineWidth(1).stroke()
+    const mastA = iso(L * 0.44, W * 0.42, 0, sx, sy, sz, ox, oy)
+    const mastB = iso(L * 0.56, W * 0.58, H, sx, sy, sz, ox, oy)
+    const boomTip = iso(L * 0.98, W * 0.22, H * 0.92, sx, sy, sz, ox, oy)
+    const braceA = iso(L * 0.50, W * 0.5, H * 0.42, sx, sy, sz, ox, oy)
+    const braceB = iso(L * 0.18, W * 0.1, H * 0.06, sx, sy, sz, ox, oy)
+    line(mastA, mastB, 3.0)
+    line(mastB, boomTip, 2.2)
+    line(braceA, braceB, 1.8)
+    line(iso(L * 0.12, W * 0.1, 0, sx, sy, sz, ox, oy), iso(L * 0.88, W * 0.1, 0, sx, sy, sz, ox, oy), 2.2)
+    const hookTop = iso(L * 0.98, W * 0.22, H * 0.92, sx, sy, sz, ox, oy)
+    const hookBot = iso(L * 0.98, W * 0.22, H * 0.64, sx, sy, sz, ox, oy)
+    line(hookTop, hookBot, 1.0, colors.note)
+    doc.circle(hookBot.x, hookBot.y + 4, 4).strokeColor(colors.note).lineWidth(1).stroke()
   } else if (style === "cage") {
-    const baseA = p3(L * 0.15, W * 0.2, 0)
-    const baseB = p3(L * 0.86, W * 0.2, 0)
-    const baseC = p3(L * 0.86, W * 0.8, 0)
-    const baseD = p3(L * 0.15, W * 0.8, 0)
-    const topL = p3(L * 0.2, W * 0.25, H * 0.78)
-    const topC = p3(L * 0.52, W * 0.5, H)
-    const topR = p3(L * 0.84, W * 0.75, H * 0.78)
-    const brace1 = p3(L * 0.24, W * 0.24, H * 0.18)
-    const brace2 = p3(L * 0.76, W * 0.7, H * 0.76)
-    const side1 = p3(L * 0.2, W * 0.8, H * 0.72)
-    const side2 = p3(L * 0.82, W * 0.2, H * 0.72)
-
-    doc.moveTo(baseA.x, baseA.y).lineTo(baseB.x, baseB.y).lineTo(baseC.x, baseC.y).lineTo(baseD.x, baseD.y).closePath().strokeColor(colors.line).lineWidth(1.1).stroke()
-    doc.moveTo(baseA.x, baseA.y).lineTo(topL.x, topL.y).strokeColor(colors.line).lineWidth(1.5).stroke()
-    doc.moveTo(baseB.x, baseB.y).lineTo(topC.x, topC.y).strokeColor(colors.line).lineWidth(1.5).stroke()
-    doc.moveTo(baseC.x, baseC.y).lineTo(topR.x, topR.y).strokeColor(colors.line).lineWidth(1.5).stroke()
-    doc.moveTo(topL.x, topL.y).lineTo(topC.x, topC.y).lineTo(topR.x, topR.y).strokeColor(colors.line).lineWidth(1.6).stroke()
-    doc.moveTo(side1.x, side1.y).lineTo(side2.x, side2.y).strokeColor(colors.line).lineWidth(1.1).stroke()
-    doc.moveTo(brace1.x, brace1.y).lineTo(brace2.x, brace2.y).strokeColor(colors.warn).lineWidth(1).stroke()
-  } else if (style === "railing") {
-    for (let i = 1; i < 8; i += 1) {
-      const p1 = p3((L / 8) * i, 0, H * 0.1)
-      const p2 = p3((L / 8) * i, W, H * 0.88)
-      doc.moveTo(p1.x, p1.y).lineTo(p2.x, p2.y).strokeColor(colors.line).lineWidth(0.9).stroke()
-    }
-  } else if (style === "greenhouse") {
-    const ridge1 = p3(0, W * 0.5, H)
-    const ridge2 = p3(L, W * 0.5, H)
-    doc.moveTo(ridge1.x, ridge1.y).lineTo(ridge2.x, ridge2.y).strokeColor(colors.warn).lineWidth(1.1).stroke()
-  } else if (style === "mezzanine") {
-    const lvl = p3(0, 0, H * 0.55)
-    const lvl2 = p3(L, W, H * 0.55)
-    doc.moveTo(lvl.x, lvl.y).lineTo(lvl2.x, lvl2.y).strokeColor(colors.line).lineWidth(1.1).stroke()
-  } else if (style === "carport" || style === "pergola") {
-    const ridge1 = p3(0, W * 0.5, H * 1.05)
-    const ridge2 = p3(L, W * 0.5, H * 1.05)
-    doc.moveTo(ridge1.x, ridge1.y).lineTo(ridge2.x, ridge2.y).strokeColor(colors.warn).lineWidth(1).stroke()
-  } else if (style === "planter") {
-    const lip1 = p3(0, 0, H * 0.8)
-    const lip2 = p3(L, W, H * 0.8)
-    doc.moveTo(lip1.x, lip1.y).lineTo(lip2.x, lip2.y).strokeColor(colors.warn).lineWidth(1).stroke()
-  } else if (style === "flatbed") {
-    const deck1 = p3(0, 0, H * 0.2)
-    const deck2 = p3(L, W, H * 0.2)
-    doc.moveTo(deck1.x, deck1.y).lineTo(deck2.x, deck2.y).strokeColor(colors.warn).lineWidth(1).stroke()
-  } else if (style === "rack") {
-    const rail1 = p3(0, 0, H * 0.72)
-    const rail2 = p3(L, W, H * 0.72)
-    doc.moveTo(rail1.x, rail1.y).lineTo(rail2.x, rail2.y).strokeColor(colors.line).lineWidth(1).stroke()
-  } else if (style === "bookshelf" || style === "winerack") {
-    const levels = style === "bookshelf" ? [0.2, 0.4, 0.6, 0.8] : [0.3, 0.5, 0.7]
-    levels.forEach(level => {
-      const s1 = p3(0, 0, H * level)
-      const s2 = p3(L, W, H * level)
-      doc.moveTo(s1.x, s1.y).lineTo(s2.x, s2.y).strokeColor(colors.line).lineWidth(0.9).stroke()
-    })
-  } else if (style === "sculpture") {
-    const spire = p3(L * 0.55, W * 0.5, H * 1.18)
-    const base = p3(L * 0.45, W * 0.45, H * 0.4)
-    doc.moveTo(base.x, base.y).lineTo(spire.x, spire.y).strokeColor(colors.warn).lineWidth(1.1).stroke()
-    doc.circle(spire.x, spire.y, 3).strokeColor(colors.warn).lineWidth(1).stroke()
+    const b1 = iso(L * 0.14, W * 0.2, 0, sx, sy, sz, ox, oy)
+    const b2 = iso(L * 0.86, W * 0.2, 0, sx, sy, sz, ox, oy)
+    const b3 = iso(L * 0.86, W * 0.8, 0, sx, sy, sz, ox, oy)
+    const b4 = iso(L * 0.14, W * 0.8, 0, sx, sy, sz, ox, oy)
+    const t1 = iso(L * 0.2, W * 0.25, H * 0.78, sx, sy, sz, ox, oy)
+    const t2 = iso(L * 0.5, W * 0.5, H, sx, sy, sz, ox, oy)
+    const t3 = iso(L * 0.82, W * 0.75, H * 0.78, sx, sy, sz, ox, oy)
+    line(b1, b2, 1.8); line(b2, b3, 1.8); line(b3, b4, 1.8); line(b4, b1, 1.8)
+    line(b1, t1, 2.0); line(b2, t2, 2.0); line(b3, t3, 2.0)
+    line(t1, t2, 2.0); line(t2, t3, 2.0)
+    line(iso(L * 0.24, W * 0.2, H * 0.18, sx, sy, sz, ox, oy), iso(L * 0.76, W * 0.72, H * 0.74, sx, sy, sz, ox, oy), 1.2, colors.note)
   } else if (style === "murphy") {
-    const wallTop1 = p3(0, 0, H)
-    const wallTop2 = p3(0, W, H)
-    const panel1 = p3(L * 0.35, W * 0.15, H * 0.85)
-    const panel2 = p3(L * 0.92, W * 0.85, H * 0.18)
-    doc.moveTo(wallTop1.x, wallTop1.y).lineTo(wallTop2.x, wallTop2.y).strokeColor(colors.line).lineWidth(1.2).stroke()
-    doc.moveTo(panel1.x, panel1.y).lineTo(panel2.x, panel2.y).strokeColor(colors.warn).lineWidth(1.2).stroke()
-  } else if (style === "wallshelf") {
-    const s1 = p3(L * 0.22, W * 0.25, H * 0.45)
-    const s2 = p3(L * 0.95, W * 0.75, H * 0.45)
-    const s3 = p3(L * 0.22, W * 0.25, H * 0.62)
-    const s4 = p3(L * 0.95, W * 0.75, H * 0.62)
-    doc.moveTo(s1.x, s1.y).lineTo(s2.x, s2.y).strokeColor(colors.line).lineWidth(1.1).stroke()
-    doc.moveTo(s3.x, s3.y).lineTo(s4.x, s4.y).strokeColor(colors.line).lineWidth(1.1).stroke()
+    const wall1 = iso(L * 0.04, 0, H, sx, sy, sz, ox, oy)
+    const wall2 = iso(L * 0.04, W, H, sx, sy, sz, ox, oy)
+    const panelA = iso(L * 0.34, W * 0.14, H * 0.84, sx, sy, sz, ox, oy)
+    const panelB = iso(L * 0.92, W * 0.84, H * 0.18, sx, sy, sz, ox, oy)
+    line(wall1, wall2, 2.4)
+    line(panelA, panelB, 2.2)
+    line(iso(L * 0.34, W * 0.14, H * 0.18, sx, sy, sz, ox, oy), iso(L * 0.92, W * 0.84, H * 0.84, sx, sy, sz, ox, oy), 1.2, colors.note)
   } else if (style === "lift") {
-    const d1 = p3(L * 0.15, W * 0.15, H * 0.22)
-    const d2 = p3(L * 0.9, W * 0.85, H * 0.22)
-    const t1 = p3(L * 0.15, W * 0.15, H * 0.7)
-    const t2 = p3(L * 0.9, W * 0.85, H * 0.7)
-    doc.moveTo(d1.x, d1.y).lineTo(t2.x, t2.y).strokeColor(colors.line).lineWidth(1.5).stroke()
-    doc.moveTo(d2.x, d2.y).lineTo(t1.x, t1.y).strokeColor(colors.line).lineWidth(1.5).stroke()
-    const piv = p3(L * 0.52, W * 0.5, H * 0.46)
-    doc.circle(piv.x, piv.y, 3).strokeColor(colors.warn).lineWidth(1).stroke()
-  } else if (style === "outdoor") {
-    doc.moveTo(A.x + 4, A.y - 8).lineTo(B.x - 4, B.y - 8).strokeColor(colors.warn).lineWidth(0.9).stroke()
-    doc.moveTo(D.x + 4, D.y - 6).lineTo(C.x - 4, C.y - 6).strokeColor(colors.warn).lineWidth(0.9).stroke()
-  } else if (style === "decor") {
-    const pTop = p3(L * 0.5, W * 0.5, H * 1.2)
-    doc.moveTo((E.x + F.x) / 2, (E.y + F.y) / 2).lineTo(pTop.x, pTop.y).strokeColor(colors.warn).lineWidth(1.2).stroke()
+    const d1 = iso(L * 0.14, W * 0.15, H * 0.22, sx, sy, sz, ox, oy)
+    const d2 = iso(L * 0.9, W * 0.85, H * 0.22, sx, sy, sz, ox, oy)
+    const t1 = iso(L * 0.14, W * 0.15, H * 0.7, sx, sy, sz, ox, oy)
+    const t2 = iso(L * 0.9, W * 0.85, H * 0.7, sx, sy, sz, ox, oy)
+    line(d1, t2, 2.4)
+    line(d2, t1, 2.4)
+    const piv = iso(L * 0.52, W * 0.5, H * 0.46, sx, sy, sz, ox, oy)
+    doc.circle(piv.x, piv.y, 4).strokeColor(colors.note).lineWidth(1.1).stroke()
   }
 
-  let cursorY = rightY + 12
-  const panelX = rightX + 12
-  const panelW = rightW - 24
+  dim(E2, F2, `${L}"`, 0, -36)
+  dim(F2, G2, `${W}"`, 48, -2)
+  dim(B, F, `${H}"`, 70, 0)
+  dim(SA, SB, `${Math.max(1, Math.round(L - inset * 2))}"`, 0, 20)
 
-  function sectionBox(title, bodyHeight) {
-    header(panelX, cursorY, panelW, title)
-    const bodyY = cursorY + 28
-    doc.roundedRect(panelX, bodyY, panelW, bodyHeight, 8).strokeColor("#2A455E").lineWidth(0.9).stroke()
-    const inner = { x: panelX + 10, y: bodyY + 8, w: panelW - 20, h: bodyHeight - 16, boxY: bodyY }
-    cursorY = bodyY + bodyHeight + 10
-    return inner
-  }
+  const topLabel = style === "hoist" ? "BOOM / MAST ASSEMBLY" : style === "cage" ? "PRIMARY CAGE STRUCTURE" : style === "murphy" ? "FOLD-DOWN PANEL / WALL FRAME" : `${Math.max(3, Math.round(topThk * 4) / 4)}" STEEL PLATE TOP`
+  const legLabel = style === "trailer" ? "AXLE / DECK FRAME" : style === "lift" ? "SCISSOR ARMS" : `${Math.round(H)}" LEGS`
+  doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(24).text(topLabel, rightX + 250, 190)
+  doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(24).text(legLabel, rightX + 615, 455)
 
-  const weldRows = [
-    ["PROCESS", process],
-    ["FILLER", `${wire} ${wiresize}`],
-    ["SHIELD GAS", gas],
-    ["VOLTAGE", ws.volts],
-    ["WIRE FEED", ws.wfs],
-    ["AMPERAGE", ws.amps],
-    ["TECHNIQUE", ws.technique],
-    ["PREHEAT", ws.preheat],
-    ["BASE MATERIAL", projectData.material]
-  ]
-  const weldBody = sectionBox("Weld Parameters", 196)
-  const weldRowH = 18
-  for (let i = 0; i < weldRows.length; i += 1) {
-    const [label, value] = weldRows[i]
-    const ry = weldBody.y + i * weldRowH
-    if (i % 2 === 0) {
-      doc.rect(weldBody.x, ry - 1, weldBody.w, weldRowH).fill("#0F1D2D")
-    }
-    doc.fillColor(colors.mute).font("Helvetica-Bold").fontSize(7.5).text(label, weldBody.x + 4, ry + 4, { width: 102 })
-    doc.fillColor(colors.text).font("Helvetica").fontSize(9.4).text(String(value), weldBody.x + 108, ry + 3, { width: weldBody.w - 112 })
-    doc.moveTo(weldBody.x, ry + weldRowH - 1).lineTo(weldBody.x + weldBody.w, ry + weldRowH - 1).strokeColor("#1F354B").lineWidth(0.5).stroke()
-  }
-  doc.moveTo(weldBody.x + 102, weldBody.y - 1).lineTo(weldBody.x + 102, weldBody.y + weldRows.length * weldRowH).strokeColor("#2A455E").lineWidth(0.8).stroke()
-
-  const cutBody = sectionBox("Cut List", 176)
-  const cols = {
-    mark: cutBody.x,
-    desc: cutBody.x + 26,
-    qty: cutBody.x + 164,
-    len: cutBody.x + 206,
-    mat: cutBody.x + 268,
-    end: cutBody.x + cutBody.w
-  }
-  const headY = cutBody.y
-  const rowH = 20
-  doc.rect(cutBody.x, headY, cutBody.w, rowH).fill("#15314A").strokeColor("#2A455E").lineWidth(0.8).stroke()
-  doc.fillColor(colors.warn).font("Helvetica-Bold").fontSize(7.5)
-  doc.text("MARK", cols.mark + 4, headY + 6, { width: 22 })
-  doc.text("DESCRIPTION", cols.desc + 4, headY + 6, { width: 136 })
-  doc.text("QTY", cols.qty + 4, headY + 6, { width: 36 })
-  doc.text("LENGTH", cols.len + 4, headY + 6, { width: 58 })
-  doc.text("MATERIAL", cols.mat + 4, headY + 6, { width: cutBody.end - cols.mat - 6 })
-
-  ;[cols.desc, cols.qty, cols.len, cols.mat].forEach(x => {
-    doc.moveTo(x, headY).lineTo(x, headY + rowH + rowH * projectData.parts.length).strokeColor("#2A455E").lineWidth(0.6).stroke()
-  })
-
-  projectData.parts.forEach((part, index) => {
-    const [letter, name, qty, len, material] = part
-    const y = headY + rowH * (index + 1)
-    if (index % 2 === 0) doc.rect(cutBody.x, y, cutBody.w, rowH).fill("#0F1D2D")
-    doc.fillColor(colors.warn).font("Helvetica-Bold").fontSize(9).text(letter, cols.mark + 8, y + 6, { width: 16, align: "center" })
-    doc.fillColor(colors.text).font("Helvetica").fontSize(8.8).text(String(name), cols.desc + 4, y + 6, { width: cols.qty - cols.desc - 8 })
-    doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(8.8).text(String(qty), cols.qty + 4, y + 6, { width: cols.len - cols.qty - 8, align: "center" })
-    doc.fillColor(colors.line).font("Helvetica-Bold").fontSize(8.8).text(String(len), cols.len + 4, y + 6, { width: cols.mat - cols.len - 8, align: "center" })
-    doc.fillColor(colors.mute).font("Helvetica").fontSize(8.3).text(String(material), cols.mat + 4, y + 6, { width: cutBody.end - cols.mat - 8 })
-    doc.moveTo(cutBody.x, y + rowH).lineTo(cutBody.x + cutBody.w, y + rowH).strokeColor("#1F354B").lineWidth(0.5).stroke()
-  })
-  doc.rect(cutBody.x, headY, cutBody.w, rowH + rowH * projectData.parts.length).strokeColor("#2A455E").lineWidth(0.9).stroke()
-
-  const stepBody = sectionBox("Build Sequence", 146)
-  projectData.steps.slice(0, 6).forEach((step, index) => {
-    const y = stepBody.y + index * 22
-    doc.circle(stepBody.x + 10, y + 8, 7).fill(colors.accent)
-    doc.fillColor("#111").font("Helvetica-Bold").fontSize(7.5).text(String(index + 1), stepBody.x + 7.6, y + 5.1)
-    doc.fillColor(colors.text).font("Helvetica").fontSize(9).text(step, stepBody.x + 24, y + 2, {
-      width: stepBody.w - 28,
-      lineGap: 1
+  function block(title, lines, x, y, width = 320) {
+    doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(40).text(title.toUpperCase(), x, y, { width })
+    let yy = y + 42
+    lines.forEach(text => {
+      doc.fillColor(colors.note).font("Helvetica-BoldOblique").fontSize(18).text(text, x, yy, { width, lineGap: 1 })
+      yy += 30
     })
-    if (index < 5) {
-      doc.moveTo(stepBody.x + 24, y + 20).lineTo(stepBody.x + stepBody.w, y + 20).strokeColor("#1F354B").lineWidth(0.5).stroke()
-    }
-  })
+  }
 
-  const notesBody = sectionBox("General Notes", 80)
-  const notes = [
-    "ALL DIMENSIONS ARE IN INCHES UNLESS NOTED.",
-    "REMOVE BURRS/SHARP EDGES. BREAK CORNERS 1/32 TYP.",
-    "VERIFY FIT-UP AND SQUARE BEFORE FINAL WELD OUT.",
-    "WELD SYMBOLS PER AWS A2.4, INSPECT BEFORE COATING."
-  ]
-  notes.forEach((note, idx) => {
-    const ny = notesBody.y + idx * 16
-    doc.fillColor(colors.warn).font("Helvetica-Bold").fontSize(7).text(`${idx + 1}.`, notesBody.x + 2, ny + 2)
-    doc.fillColor(colors.mute).font("Helvetica").fontSize(7.8).text(note, notesBody.x + 16, ny + 2, { width: notesBody.w - 18 })
-  })
+  const parts = projectData.parts.slice(0, 8)
+  const p = i => (parts[i] ? `${String(parts[i][2]).toUpperCase()} ${String(parts[i][1]).toUpperCase()} ${String(parts[i][3]).toUpperCase()}` : "")
+  block("Upper Frame", [p(0), p(1), p(2), `${Math.max(2, Math.round(Math.min(L, W) / 8))}" WELDS`].filter(Boolean), 40, 155)
+  block("Tool Bracket", [p(3) || "ONE 14\" FLAT IRON LENGTH", "ONE 8\" FLAT IRON LENGTH", "OVERLAPPED, WELDED TO FRAME"], 40, 372)
+  block("Shelf", [p(4), p(5), "FOUR 12\"x24\" SECTIONS OF EXPANDED STEEL"].filter(Boolean), 40, 592)
+  block("Crossbars", [`${Math.max(2, Math.round((L - inset * 2) / 5))}" FLAT IRON LENGTHS`, "BUTT WELDED TO SHELF FRAME", "SPOT WELDED TO SUPPORTS"], 556, 712, 620)
 
-  // Professional title block
-  const tbW = 430
-  const tbH = 72
-  const tbX = pageWidth - tbW - 18
-  const tbY = pageHeight - tbH - 22
-  doc.roundedRect(tbX, tbY, tbW, tbH, 8).fillAndStroke("#0E1C2B", "#2D4963")
-  doc.moveTo(tbX + 220, tbY).lineTo(tbX + 220, tbY + tbH).strokeColor("#2D4963").lineWidth(1).stroke()
-  doc.moveTo(tbX + 320, tbY).lineTo(tbX + 320, tbY + tbH).strokeColor("#2D4963").lineWidth(1).stroke()
-  doc.moveTo(tbX, tbY + 24).lineTo(tbX + tbW, tbY + 24).strokeColor("#2D4963").lineWidth(1).stroke()
-  doc.moveTo(tbX + 220, tbY + 48).lineTo(tbX + tbW, tbY + 48).strokeColor("#2D4963").lineWidth(1).stroke()
-
-  const drawingNo = `WB-${sanitizeFilename(project).toUpperCase().slice(0, 18)}-${String(L).padStart(3, "0")}`
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("DRAWING TITLE", tbX + 10, tbY + 7)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(10).text(project.toUpperCase(), tbX + 10, tbY + 12, { width: 200 })
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("DRAWING NO.", tbX + 230, tbY + 7)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(9).text(drawingNo, tbX + 230, tbY + 12, { width: 86 })
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("REV", tbX + 330, tbY + 7)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(9).text("A", tbX + 330, tbY + 12)
-
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("SCALE", tbX + 230, tbY + 30)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(9).text("NTS", tbX + 230, tbY + 36)
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("SHEET", tbX + 330, tbY + 30)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(9).text("1 OF 1", tbX + 330, tbY + 36)
-
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("CHECKED BY", tbX + 10, tbY + 54)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(9).text("WELDBLUEPRINTS AI", tbX + 70, tbY + 53)
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(7).text("DATE", tbX + 230, tbY + 54)
-  doc.fillColor(colors.text).font("Helvetica-Bold").fontSize(9).text(new Date().toLocaleDateString(), tbX + 260, tbY + 53)
-
-  doc.rect(0, pageHeight - 18, pageWidth, 18).fill(colors.panel)
-  doc.fillColor(colors.mute).font("Helvetica").fontSize(8).text(
-    `WELDBLUEPRINTS AI  |  ${project.toUpperCase()}  |  ${L}" x ${W}" x ${H}"  |  VERIFY ALL DIMENSIONS BEFORE CUTTING`,
-    24,
-    pageHeight - 12
+  const metaY = pageHeight - 34
+  doc.fillColor(colors.note).font("Helvetica-Oblique").fontSize(12).text(
+    `PROJECT: ${project.toUpperCase()}    WELDER: ${welder.toUpperCase()}    PROCESS: ${process.toUpperCase()} ${wire.toUpperCase()} ${wiresize.toUpperCase()}    GAS: ${gas.toUpperCase()}    THICKNESS: ${thickness}    DATE: ${new Date().toLocaleDateString()}`,
+    40, metaY, { width: pageWidth - 80, align: "center" }
+  )
+  doc.fillColor(colors.note).font("Helvetica-Oblique").fontSize(11).text(
+    `VOLTAGE ${ws.volts}  |  WIRE FEED ${ws.wfs}  |  AMPERAGE ${ws.amps}  |  TECHNIQUE ${ws.technique}  |  PREHEAT ${ws.preheat}`,
+    40, metaY + 14, { width: pageWidth - 80, align: "center" }
   )
 }
 
@@ -2274,4 +1812,5 @@ app.listen(PORT, async () => {
     console.log("Blueprint validation: OK")
   }
 })
+
 
