@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>WeldBlueprints AI | Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+:root {
+  --orange:#FF5E1A;--orange-dim:rgba(255,94,26,0.12);--border-hot:rgba(255,94,26,0.4);
+  --steel:#1C1F26;--steel-light:#252932;--steel-mid:#2E3340;--plate:#0E1017;
+  --chalk:#F0EDE4;--chalk-dim:rgba(240,237,228,0.55);--chalk-faint:rgba(240,237,228,0.2);
+  --green:#39C46B;--yellow:#FFD600;--red:#FF4646;--blue:#4A90D9;
+  --border:rgba(240,237,228,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Barlow',sans-serif;background:var(--plate);color:var(--chalk);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,0.013) 39px,rgba(255,255,255,0.013) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.013) 39px,rgba(255,255,255,0.013) 40px);pointer-events:none;z-index:0}
+
+/* LOGIN SCREEN */
+#loginScreen{position:fixed;inset:0;background:var(--plate);display:flex;align-items:center;justify-content:center;z-index:100}
+.login-box{background:var(--steel);border:1px solid var(--border);padding:40px;width:380px;position:relative}
+.login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),transparent)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.login-mark{width:36px;height:36px;background:var(--orange);display:flex;align-items:center;justify-content:center;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)}
+.login-mark i{color:#000;font-size:14px}
+.login-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em}
+.login-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px}
+.login-box h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:20px;color:var(--chalk-dim)}
+.login-box label{display:block;font-family:'DM Mono',monospace;font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px}
+.login-box input{width:100%;padding:10px 12px;background:var(--plate);border:1px solid var(--border);color:var(--chalk);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:14px}
+.login-box input:focus{outline:none;border-color:var(--orange)}
+.login-btn{width:100%;padding:12px;background:var(--orange);border:none;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);transition:background 0.15s}
+.login-btn:hover{background:#FF7A3D}
+.login-error{color:var(--red);font-family:'DM Mono',monospace;font-size:11px;margin-top:10px;display:none}
+
+/* MAIN LAYOUT */
+.container{max-width:1200px;margin:0 auto;padding:0 24px 48px;position:relative;z-index:1;display:none}
+
+/* HEADER */
+.header{padding:28px 0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);margin-bottom:24px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{width:38px;height:38px;background:var(--orange);display:flex;align-items:center;justify-content:center;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%)}
+.logo-mark i{color:#000;font-size:15px}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:0.02em}
+.logo-text span{color:var(--orange)}
+.admin-badge{font-family:'DM Mono',monospace;font-size:10px;background:rgba(255,94,26,0.15);color:var(--orange);border:1px solid var(--border-hot);padding:3px 10px;letter-spacing:0.1em;text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:12px}
+.logout-btn{font-family:'DM Mono',monospace;font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;background:none;border:1px solid var(--border);padding:6px 14px;transition:all 0.15s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+.home-btn{font-family:'DM Mono',monospace;font-size:11px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:0.08em;text-decoration:none;border:1px solid var(--border);padding:6px 14px;transition:all 0.15s}
+.home-btn:hover{border-color:var(--orange);color:var(--orange)}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:24px}
+.stat-card{background:var(--steel);border:1px solid var(--border);padding:16px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.total::before{background:var(--blue)}
+.stat-card.pro::before{background:var(--orange)}
+.stat-card.free::before{background:var(--green)}
+.stat-card.revenue::before{background:var(--yellow)}
+.stat-card.gens::before{background:var(--chalk-faint)}
+.stat-card.projects::before{background:#A855F7}
+.stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--chalk-faint);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.stat-value{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;line-height:1}
+.stat-card.total .stat-value{color:var(--blue)}
+.stat-card.pro .stat-value{color:var(--orange)}
+.stat-card.free .stat-value{color:var(--green)}
+.stat-card.revenue .stat-value{color:var(--yellow)}
+.stat-card.gens .stat-value{color:var(--chalk)}
+.stat-card.projects .stat-value{color:#A855F7}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar-search{flex:1;min-width:200px;padding:8px 12px;background:var(--steel);border:1px solid var(--border);color:var(--chalk);font-family:'DM Mono',monospace;font-size:12px}
+.toolbar-search:focus{outline:none;border-color:var(--orange)}
+.toolbar-search::placeholder{color:var(--chalk-faint)}
+.filter-btn{padding:7px 14px;background:var(--steel);border:1px solid var(--border);color:var(--chalk-dim);font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;transition:all 0.15s}
+.filter-btn:hover,.filter-btn.active{border-color:var(--orange);color:var(--orange);background:var(--orange-dim)}
+.count-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--chalk-faint);letter-spacing:0.06em;margin-left:auto}
+
+/* TABLE */
+.table-wrap{background:var(--steel);border:1px solid var(--border);overflow:hidden;position:relative}
+.table-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange) 0%,transparent 60%)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--steel-mid)}
+th{padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--chalk-faint);text-transform:uppercase;letter-spacing:0.08em;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.user-name{font-weight:600;color:var(--chalk)}
+.user-email{font-family:'DM Mono',monospace;font-size:11px;color:var(--chalk-dim)}
+.badge-pro{font-family:'DM Mono',monospace;font-size:10px;background:rgba(255,94,26,0.15);color:var(--orange);border:1px solid rgba(255,94,26,0.3);padding:2px 8px;text-transform:uppercase;letter-spacing:0.06em}
+.badge-free{font-family:'DM Mono',monospace;font-size:10px;background:rgba(57,196,107,0.1);color:var(--green);border:1px solid rgba(57,196,107,0.3);padding:2px 8px;text-transform:uppercase;letter-spacing:0.06em}
+.badge-admin{font-family:'DM Mono',monospace;font-size:10px;background:rgba(255,214,0,0.1);color:var(--yellow);border:1px solid rgba(255,214,0,0.3);padding:2px 8px;text-transform:uppercase;letter-spacing:0.06em}
+.gen-bar-wrap{display:flex;align-items:center;gap:6px}
+.gen-bar{height:4px;background:var(--plate);flex:1;border-radius:2px;overflow:hidden}
+.gen-bar-fill{height:100%;background:var(--orange);border-radius:2px;transition:width 0.3s}
+.gen-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--chalk-faint);min-width:28px;text-align:right}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.act-btn{padding:4px 10px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;border:1px solid var(--border);background:var(--plate);color:var(--chalk-dim);transition:all 0.12s;white-space:nowrap}
+.act-btn:hover{color:var(--chalk)}
+.act-btn.grant{border-color:rgba(255,94,26,0.4);color:var(--orange)}
+.act-btn.grant:hover{background:var(--orange);color:#000}
+.act-btn.revoke{border-color:rgba(255,70,70,0.4);color:var(--red)}
+.act-btn.revoke:hover{background:var(--red);color:#fff}
+.act-btn.reset{border-color:rgba(57,196,107,0.4);color:var(--green)}
+.act-btn.reset:hover{background:var(--green);color:#000}
+.act-btn.del{border-color:rgba(255,70,70,0.3);color:rgba(255,70,70,0.6)}
+.act-btn.del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.date-cell{font-family:'DM Mono',monospace;font-size:10px;color:var(--chalk-faint)}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;background:var(--green);color:#000;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;z-index:999;display:none;border-left:3px solid #000}
+#toast.error{background:var(--red);color:#fff}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px;font-family:'DM Mono',monospace;font-size:12px;color:var(--chalk-faint);letter-spacing:0.08em;text-transform:uppercase}
+
+/* LOADING */
+.loading-row td{text-align:center;padding:32px;font-family:'DM Mono',monospace;font-size:11px;color:var(--chalk-faint);letter-spacing:0.1em;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-mark"><i class="fas fa-drafting-compass"></i></div>
+      <div>
+        <div class="login-title">Weld<span style="color:var(--orange)">Blueprints</span></div>
+        <div class="login-sub">Admin Panel</div>
+      </div>
+    </div>
+    <h2>Admin Sign In</h2>
+    <label>Email</label>
+    <input type="email" id="loginEmail" value="admin@weldblueprints.ai" autocomplete="username">
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Admin password" autocomplete="current-password">
+    <button class="login-btn" onclick="adminLogin()"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Main Admin UI -->
+<div class="container" id="mainUI">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark"><i class="fas fa-drafting-compass"></i></div>
+      <div>
+        <div class="logo-text">Weld<span>Blueprints</span></div>
+      </div>
+      <span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>
+    </div>
+    <div class="header-right">
+      <a href="/" class="home-btn"><i class="fas fa-home"></i> Main App</a>
+      <button class="logout-btn" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card total"><div class="stat-label">Total Users</div><div class="stat-value" id="statTotal">—</div></div>
+    <div class="stat-card pro"><div class="stat-label">Pro Users</div><div class="stat-value" id="statPro">—</div></div>
+    <div class="stat-card free"><div class="stat-label">Free Users</div><div class="stat-value" id="statFree">—</div></div>
+    <div class="stat-card revenue"><div class="stat-label">Revenue</div><div class="stat-value" id="statRevenue">—</div></div>
+    <div class="stat-card gens"><div class="stat-label">Total Blueprints</div><div class="stat-value" id="statGens">—</div></div>
+    <div class="stat-card projects"><div class="stat-label">Saved Projects</div><div class="stat-value" id="statProjects">—</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input class="toolbar-search" type="text" id="searchInput" placeholder="Search by name or email..." oninput="renderTable()">
+    <button class="filter-btn active" id="filterAll" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" id="filterPro" onclick="setFilter('pro',this)">Pro</button>
+    <button class="filter-btn" id="filterFree" onclick="setFilter('free',this)">Free</button>
+    <button class="filter-btn" onclick="exportJson('users')"><i class="fas fa-file-export"></i> Export Users</button>
+    <button class="filter-btn" onclick="exportJson('projects')"><i class="fas fa-file-export"></i> Export Projects</button>
+    <button class="filter-btn" onclick="exportJson('analytics')"><i class="fas fa-chart-line"></i> Export Analytics</button>
+    <span class="count-label" id="countLabel"></span>
+    <button class="filter-btn" onclick="loadData()" style="margin-left:4px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Status</th>
+          <th>Blueprints Used</th>
+          <th>Joined</th>
+          <th>Pro Since</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <tr class="loading-row"><td colspan="6">Loading users...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+let adminToken = sessionStorage.getItem('adminToken');
+let allUsers = [];
+let currentFilter = 'all';
+
+// Auto-login if token exists
+if (adminToken) {
+  verifyAndShow();
+}
+
+// Enter key on login
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') adminLogin();
+});
+
+async function adminLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const pass = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.token) {
+      errEl.textContent = data.error || 'Login failed';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Verify admin status
+    const meRes = await fetch('/api/admin/stats', {
+      headers: { 'Authorization': `Bearer ${data.token}` }
+    });
+
+    if (!meRes.ok) {
+      errEl.textContent = 'This account does not have admin access.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    adminToken = data.token;
+    sessionStorage.setItem('adminToken', adminToken);
+    showAdmin();
+    loadData();
+  } catch (e) {
+    errEl.textContent = 'Connection error — is the server running?';
+    errEl.style.display = 'block';
+  }
+}
+
+async function verifyAndShow() {
+  try {
+    const res = await fetch('/api/admin/stats', {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    if (res.ok) {
+      showAdmin();
+      loadData();
+    } else {
+      sessionStorage.removeItem('adminToken');
+      adminToken = null;
+    }
+  } catch(e) {
+    sessionStorage.removeItem('adminToken');
+  }
+}
+
+function showAdmin() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainUI').style.display = 'block';
+}
+
+function adminLogout() {
+  sessionStorage.removeItem('adminToken');
+  adminToken = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainUI').style.display = 'none';
+}
+
+async function loadData() {
+  try {
+    // Load stats
+    const sRes = await fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    const stats = await sRes.json();
+    document.getElementById('statTotal').textContent = stats.totalUsers;
+    document.getElementById('statPro').textContent = stats.proUsers;
+    document.getElementById('statFree').textContent = stats.freeUsers;
+    document.getElementById('statRevenue').textContent = '$' + stats.revenue.toFixed(2);
+    document.getElementById('statGens').textContent = stats.totalGenerations;
+    document.getElementById('statProjects').textContent = stats.totalProjects;
+
+    // Load users
+    const uRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    const data = await uRes.json();
+    allUsers = data.users;
+    renderTable();
+  } catch(e) {
+    toast('Failed to load data', true);
+  }
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let filtered = allUsers.filter(u => {
+    const matchSearch = !search || u.username.toLowerCase().includes(search) || u.email.toLowerCase().includes(search);
+    const matchFilter = currentFilter === 'all' || (currentFilter === 'pro' && u.isPro) || (currentFilter === 'free' && !u.isPro);
+    return matchSearch && matchFilter;
+  });
+
+  document.getElementById('countLabel').textContent = `${filtered.length} user${filtered.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('userTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;font-family:DM Mono,monospace;font-size:12px;color:var(--chalk-faint);letter-spacing:0.08em;text-transform:uppercase;">No users found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(u => {
+    const genPct = Math.min(100, (u.generationsUsed / 3) * 100);
+    const genColor = u.isPro ? 'var(--orange)' : (u.generationsUsed >= 3 ? 'var(--red)' : 'var(--green)');
+    const genLabel = u.isPro ? '∞' : `${u.generationsUsed}/3`;
+    const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—';
+    const proSince = u.proActivatedAt ? new Date(u.proActivatedAt).toLocaleDateString() : '—';
+
+    const statusBadge = u.isAdmin
+      ? '<span class="badge-admin"><i class="fas fa-crown"></i> Admin</span>'
+      : u.isPro
+        ? '<span class="badge-pro"><i class="fas fa-bolt"></i> Pro</span>'
+        : '<span class="badge-free">Free</span>';
+
+    const actions = u.isAdmin ? '<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--chalk-faint);">— admin account —</span>' : `
+      ${!u.isPro ? `<button class="act-btn grant" onclick="grantPro(${u.id})"><i class="fas fa-bolt"></i> Grant Pro</button>` : ''}
+      ${u.isPro ? `<button class="act-btn revoke" onclick="revokePro(${u.id})"><i class="fas fa-times"></i> Revoke Pro</button>` : ''}
+      <button class="act-btn reset" onclick="resetGens(${u.id})"><i class="fas fa-redo"></i> Reset Gens</button>
+      <button class="act-btn del" onclick="deleteUser(${u.id}, '${u.username}')"><i class="fas fa-trash"></i></button>
+    `;
+
+    return `
+      <tr>
+        <td>
+          <div class="user-name">${u.username}</div>
+          <div class="user-email">${u.email}</div>
+        </td>
+        <td>${statusBadge}</td>
+        <td>
+          <div class="gen-bar-wrap">
+            <div class="gen-bar"><div class="gen-bar-fill" style="width:${u.isPro ? 100 : genPct}%;background:${genColor};"></div></div>
+            <span class="gen-count">${genLabel}</span>
+          </div>
+        </td>
+        <td class="date-cell">${joined}</td>
+        <td class="date-cell">${proSince}</td>
+        <td><div class="actions">${actions}</div></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function grantPro(id) {
+  const res = await fetch(`/api/admin/users/${id}/grant-pro`, {
+    method: 'POST', headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  if (res.ok) { toast('Pro granted'); loadData(); }
+  else toast('Failed', true);
+}
+
+async function revokePro(id) {
+  if (!confirm('Revoke Pro access from this user?')) return;
+  const res = await fetch(`/api/admin/users/${id}/revoke-pro`, {
+    method: 'POST', headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  if (res.ok) { toast('Pro revoked'); loadData(); }
+  else toast('Failed', true);
+}
+
+async function resetGens(id) {
+  const res = await fetch(`/api/admin/users/${id}/reset-generations`, {
+    method: 'POST', headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  if (res.ok) { toast('Generations reset'); loadData(); }
+  else toast('Failed', true);
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+  const res = await fetch(`/api/admin/users/${id}`, {
+    method: 'DELETE', headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  if (res.ok) { toast('User deleted'); loadData(); }
+  else toast('Failed', true);
+}
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'error' : '';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+async function exportJson(type) {
+  try {
+    const endpoint = `/api/admin/export/${type}`;
+    const res = await fetch(endpoint, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    if (!res.ok) {
+      toast(`Export failed (${type})`, true);
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `${type}-export-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+    toast(`${type} export downloaded`);
+  } catch (e) {
+    toast(`Export failed (${type})`, true);
+  }
+}
+</script>
+</body>
+</html>

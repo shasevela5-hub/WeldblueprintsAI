@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing | WeldBlueprints AI</title>
+  <meta name="paypal-client-id" content="YOUR_PAYPAL_CLIENT_ID" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <style>
+    :root {
+      --bg: #111820;
+      --paper: #1a2430;
+      --ink: #eef3f8;
+      --muted: #b5c0cb;
+      --line: rgba(238, 242, 246, 0.16);
+      --line-strong: rgba(238, 242, 246, 0.28);
+      --orange: #e0672b;
+      --orange-soft: rgba(224, 103, 43, 0.14);
+      --blue: #4c8ac9;
+      --green: #4caf78;
+      --red: #cf6666;
+      --card: rgba(28, 38, 49, 0.88);
+      --radius: 28px;
+      --radius-sm: 18px;
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.36);
+      --max: 1140px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(224, 103, 43, 0.12), transparent 22%),
+        radial-gradient(circle at 92% 18%, rgba(76, 138, 201, 0.14), transparent 22%),
+        linear-gradient(180deg, #141d26 0%, #1a2530 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(21,21,21,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(21,21,21,0.03) 1px, transparent 1px);
+      background-size: 34px 34px;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      padding: 18px 0;
+    }
+
+    .topbar-inner {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 18px;
+      border: 1px solid var(--line);
+      background: rgba(20, 29, 39, 0.9);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #ef7d45, var(--orange));
+      color: #111;
+      font: 900 1.2rem/1 Arial, sans-serif;
+      letter-spacing: -0.03em;
+      box-shadow: 0 12px 26px rgba(214, 90, 31, 0.22);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 16px;
+      object-fit: cover;
+    }
+
+    .brand-text {
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 0.96;
+      font-size: 1.15rem;
+    }
+
+    .brand-text strong {
+      color: var(--orange);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .nav a:hover {
+      color: var(--ink);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn,
+    button {
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      transition: 0.2s ease;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 800;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 20px;
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.14);
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #12161b;
+      box-shadow: 0 12px 24px rgba(224, 103, 43, 0.24);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      padding: 18px 0 18px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font: 700 0.78rem/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      background: rgba(27, 79, 140, 0.06);
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      line-height: 0.95;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 7vw, 5.8rem);
+      letter-spacing: -0.06em;
+      max-width: 10ch;
+      margin: 0 auto 16px;
+    }
+
+    .hero p {
+      max-width: 650px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.75;
+    }
+
+    .plans {
+      display: grid;
+      grid-template-columns: 0.88fr 1.12fr;
+      gap: 18px;
+      margin: 26px 0 24px;
+      align-items: stretch;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: var(--line-strong);
+    }
+
+    .plan {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .plan-top {
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 18px;
+    }
+
+    .plan-label {
+      font: 700 0.76rem/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .plan-name {
+      font-size: 2.35rem;
+      letter-spacing: -0.05em;
+      margin-bottom: 12px;
+    }
+
+    .price {
+      display: flex;
+      align-items: end;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .price-main {
+      font: 900 4.1rem/0.88 Arial, sans-serif;
+      letter-spacing: -0.07em;
+    }
+
+    .price-main small {
+      font-size: 0.38em;
+      letter-spacing: -0.03em;
+    }
+
+    .price-sub {
+      color: var(--muted);
+      font: 0.92rem/1.5 Arial, sans-serif;
+      max-width: 26ch;
+    }
+
+    .featured {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(35, 48, 62, 0.96), rgba(27, 38, 49, 0.9));
+    }
+
+    .featured::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--orange), #f19c62);
+    }
+
+    .badge {
+      display: inline-block;
+      align-self: start;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--orange-soft);
+      color: var(--orange);
+      border: 1px solid rgba(214, 90, 31, 0.16);
+      font: 800 0.76rem/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 22px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .features li {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--muted);
+      font: 0.98rem/1.55 Arial, sans-serif;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(21, 21, 21, 0.06);
+    }
+
+    .features li:last-child {
+      border-bottom: 0;
+    }
+
+    .features li.yes {
+      color: var(--ink);
+    }
+
+    .features li .mark {
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .yes .mark { color: var(--green); }
+    .no .mark { color: #9f978d; }
+    .limited .mark { color: #b08116; }
+
+    .plan-actions {
+      margin-top: auto;
+    }
+
+    .small-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font: 0.88rem/1.55 Arial, sans-serif;
+    }
+
+    #paypal-button-container {
+      margin-top: 8px;
+      min-height: 46px;
+    }
+
+    .trust {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 20px 0 26px;
+    }
+
+    .trust-item {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(9, 14, 20, 0.38);
+      text-align: center;
+      font: 0.86rem/1.5 Arial, sans-serif;
+      color: var(--muted);
+    }
+
+    .trust-item strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .state {
+      display: none;
+      padding: 28px;
+      margin: 18px 0 24px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+      box-shadow: var(--shadow);
+    }
+
+    .state.success {
+      background: rgba(46, 125, 80, 0.08);
+      border-color: rgba(46, 125, 80, 0.18);
+    }
+
+    .state.pro {
+      background: rgba(27, 79, 140, 0.08);
+      border-color: rgba(27, 79, 140, 0.18);
+    }
+
+    .notice {
+      display: none;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.42);
+      font: 0.9rem/1.5 Arial, sans-serif;
+      color: var(--muted);
+      margin: 0 0 16px;
+    }
+
+    .notice.error {
+      border-color: rgba(179,74,74,0.28);
+      background: #fdf3f3;
+      color: var(--red);
+    }
+
+    .paypal-fallback {
+      display: none;
+      margin-top: 8px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(9, 14, 20, 0.42);
+      color: var(--muted);
+      font: 0.88rem/1.5 Arial, sans-serif;
+    }
+
+    .state h3 {
+      font-size: 2rem;
+      letter-spacing: -0.05em;
+      margin-bottom: 10px;
+    }
+
+    .state p {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+      font-size: 1rem;
+      max-width: 56ch;
+    }
+
+    .faq {
+      margin: 26px 0;
+    }
+
+    .faq-head {
+      margin-bottom: 14px;
+    }
+
+    .faq-head h2 {
+      font-size: 2.2rem;
+      letter-spacing: -0.05em;
+      margin-bottom: 8px;
+    }
+
+    .faq-head p {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .faq-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .faq-item {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(9, 14, 20, 0.38);
+    }
+
+    .faq-item h3 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      letter-spacing: -0.03em;
+    }
+
+    .faq-item p {
+      color: var(--muted);
+      line-height: 1.72;
+      font: 0.97rem/1.72 Arial, sans-serif;
+    }
+
+    .footer {
+      padding: 12px 0 42px;
+    }
+
+    .footer-card {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 22px 24px;
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+      box-shadow: var(--shadow);
+      font: 0.95rem/1.5 Arial, sans-serif;
+      color: var(--muted);
+    }
+
+    @media (max-width: 980px) {
+      .plans,
+      .trust {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner {
+        grid-template-columns: 1fr;
+        border-radius: 26px;
+      }
+
+      .nav,
+      .actions {
+        justify-content: flex-start;
+      }
+
+      h1 {
+        font-size: 3.2rem;
+      }
+
+      .plan {
+        padding: 22px;
+      }
+
+      .price-main {
+        font-size: 3.4rem;
+      }
+
+      .trust-item,
+      .faq-item,
+      .state,
+      .footer-card {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/index.html">
+        <div class="brand-mark"><img src="/logo.svg" alt="WeldBlueprints AI logo" /></div>
+        <div class="brand-text">WELDBLUEPRINTS <strong>AI</strong></div>
+      </a>
+
+      <nav class="nav">
+        <a href="/index.html#features">Features</a>
+        <a href="/index.html#generator">Generator</a>
+        <a href="/index.html#gallery">Projects</a>
+        <a href="/login.html">Login</a>
+      </nav>
+
+      <div class="actions">
+        <a class="btn btn-ghost" href="/index.html">Back Home</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Lifetime Access</div>
+      <h1>One payment. Unlimited blueprint generation.</h1>
+      <p>
+        Upgrade once and remove the free-generation limit. Keep the gallery, save projects,
+        and generate blueprint PDFs whenever you need them.
+      </p>
+    </section>
+
+    <div id="notice" class="notice"></div>
+
+    <section id="alreadyPro" class="state pro">
+      <h3>You already have Pro access.</h3>
+      <p>Your account is already unlocked for unlimited blueprint generation.</p>
+      <a class="btn btn-primary" href="/index.html">Go To Generator</a>
+    </section>
+
+    <section id="successMsg" class="state success">
+      <h3>Pro activated.</h3>
+      <p>Lifetime access is now enabled on your account. You can go straight back to the generator.</p>
+      <a class="btn btn-primary" href="/index.html">Start Building</a>
+    </section>
+
+    <section id="plansGrid" class="plans">
+      <article class="card plan">
+        <div class="plan-top">
+          <div class="plan-label">Current Option</div>
+          <h2 class="plan-name">Free</h2>
+          <div class="price">
+            <div class="price-main">$0</div>
+          </div>
+          <div class="price-sub">Good for testing the generator before upgrading.</div>
+        </div>
+
+        <ul class="features">
+          <li class="limited"><span class="mark">•</span><span>3 blueprint generations total</span></li>
+          <li class="yes"><span class="mark">+</span><span>Browse the full project gallery</span></li>
+          <li class="yes"><span class="mark">+</span><span>Use the scrap analyzer</span></li>
+          <li class="no"><span class="mark">-</span><span>Unlimited PDF generation</span></li>
+          <li class="no"><span class="mark">-</span><span>Save projects to your account</span></li>
+        </ul>
+
+        <div class="plan-actions">
+          <a class="btn btn-ghost" href="/index.html">Continue Free</a>
+        </div>
+      </article>
+
+      <article class="card plan featured">
+        <div class="badge">Best Value</div>
+
+        <div class="plan-top">
+          <div class="plan-label">Upgrade</div>
+          <h2 class="plan-name">Pro Lifetime</h2>
+          <div class="price">
+            <div class="price-main">$19<small>.99</small></div>
+          </div>
+          <div class="price-sub">One-time payment. No subscription. No renewals.</div>
+        </div>
+
+        <ul class="features">
+          <li class="yes"><span class="mark">+</span><span>Unlimited blueprint PDF generation</span></li>
+          <li class="yes"><span class="mark">+</span><span>Full gallery access</span></li>
+          <li class="yes"><span class="mark">+</span><span>Scrap analyzer</span></li>
+          <li class="yes"><span class="mark">+</span><span>Save projects to your dashboard</span></li>
+          <li class="yes"><span class="mark">+</span><span>All future project additions included</span></li>
+        </ul>
+
+        <div class="plan-actions">
+          <div id="paypal-button-container"></div>
+          <div id="paypalFallback" class="paypal-fallback"></div>
+          <p class="small-note">Using your sandbox client ID. Swap to live key at launch.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="trust">
+      <div class="trust-item">
+        <strong>Secure checkout</strong>
+        Pay with PayPal
+      </div>
+      <div class="trust-item">
+        <strong>No recurring fees</strong>
+        One payment only
+      </div>
+      <div class="trust-item">
+        <strong>Instant activation</strong>
+        Pro unlocks immediately
+      </div>
+      <div class="trust-item">
+        <strong>Account-based access</strong>
+        Use your plan on any device
+      </div>
+    </section>
+
+    <section class="faq">
+      <div class="faq-head">
+        <h2>Common questions</h2>
+        <p>Short answers to the main upgrade questions.</p>
+      </div>
+
+      <div class="faq-list">
+        <article class="faq-item">
+          <h3>Is this really a one-time payment?</h3>
+          <p>Yes. Pay once and keep Pro access permanently. There are no monthly fees or renewals in this flow.</p>
+        </article>
+
+        <article class="faq-item">
+          <h3>What happens to the free limit?</h3>
+          <p>Free accounts keep the 3-generation cap. After upgrading, blueprint generation becomes unlimited.</p>
+        </article>
+
+        <article class="faq-item">
+          <h3>Do I need an account before upgrading?</h3>
+          <p>Yes. The Pro status is attached to your signed-in account, so create or log into an account first.</p>
+        </article>
+
+        <article class="faq-item">
+          <h3>What if payment succeeds but activation fails?</h3>
+          <p>The page will show an error and you should keep the PayPal order ID. That is enough to resolve the upgrade on the server side.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-card">
+        <div>
+          <strong style="display:block; color:var(--ink); margin-bottom:6px;">WeldBlueprints AI</strong>
+          Lifetime access for unlimited fabrication blueprint generation.
+        </div>
+        <div>
+          <a href="/index.html">Home</a> |
+          <a href="/login.html">Login</a> |
+          <a href="/index.html#generator">Generator</a> |
+          <a href="/terms.html">Terms</a> |
+          <a href="/privacy.html">Privacy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const token = localStorage.getItem("token")
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
+    const PAYPAL_CLIENT_ID = (document.querySelector('meta[name="paypal-client-id"]')?.content || "").trim()
+    const TRUSTED_EXTERNAL_HOSTS = new Set(["www.paypal.com", "paypal.com"])
+
+    const alreadyPro = document.getElementById("alreadyPro")
+    const successMsg = document.getElementById("successMsg")
+    const plansGrid = document.getElementById("plansGrid")
+    const notice = document.getElementById("notice")
+    const paypalFallback = document.getElementById("paypalFallback")
+
+    function showNotice(text, isError) {
+      notice.textContent = text
+      notice.className = "notice" + (isError ? " error" : "")
+      notice.style.display = "block"
+    }
+
+    function trackClientEvent(eventName) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: eventName })
+      }).catch(() => {})
+    }
+
+    function clearSession() {
+      localStorage.removeItem("token")
+      sessionStorage.removeItem("token")
+      localStorage.removeItem("user")
+    }
+
+    function isTrustedUrl(rawUrl) {
+      try {
+        const parsed = new URL(rawUrl, window.location.origin)
+        if (parsed.origin === window.location.origin) return true
+        return TRUSTED_EXTERNAL_HOSTS.has(parsed.hostname)
+      } catch (_) {
+        return false
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest("a[target='_blank']")
+      if (!link) return
+      if (!isTrustedUrl(link.href)) {
+        event.preventDefault()
+        showNotice("Blocked untrusted external link.", true)
+      }
+    })
+
+    function loadPayPalSdk(clientId) {
+      return new Promise((resolve, reject) => {
+        if (window.paypal) return resolve()
+        const script = document.createElement("script")
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD`
+        script.async = true
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error("PayPal SDK failed to load"))
+        document.head.appendChild(script)
+      })
+    }
+
+    if (user.isPro) {
+      alreadyPro.style.display = "block"
+      plansGrid.style.display = "none"
+    }
+
+    if (!token && !user.isPro) {
+      showNotice("Sign in first to activate Pro. Your payment must be linked to your account.", true)
+      paypalFallback.style.display = "block"
+      paypalFallback.innerHTML = `Please <a href="/login.html" style="text-decoration:underline;">sign in</a> to enable checkout.`
+    }
+
+    if (!user.isPro && token) {
+      if (!PAYPAL_CLIENT_ID || PAYPAL_CLIENT_ID === "YOUR_PAYPAL_CLIENT_ID") {
+        paypalFallback.style.display = "block"
+        paypalFallback.textContent = "Set your PayPal client ID in pricing.html meta tag before enabling checkout."
+      } else {
+        loadPayPalSdk(PAYPAL_CLIENT_ID).then(() => {
+          paypal.Buttons({
+        style: {
+          shape: "pill",
+          color: "gold",
+          layout: "vertical",
+          label: "pay",
+          height: 46
+        },
+
+        createOrder: function(data, actions) {
+          return actions.order.create({
+            purchase_units: [{
+              amount: {
+                value: "19.99",
+                currency_code: "USD"
+              },
+              description: "WeldBlueprints AI - Lifetime Access"
+            }]
+          })
+        },
+
+        onApprove: async function(data, actions) {
+          const order = await actions.order.capture()
+
+          try {
+            const res = await fetch("/api/subscription/activate", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
+              },
+              body: JSON.stringify({
+                orderID: data.orderID,
+                payerID: data.payerID,
+                payerEmail: order.payer.email_address,
+                amount: "19.99"
+              })
+            })
+
+            const result = await res.json()
+
+            if (result.success) {
+              const updatedUser = { ...user, ...(result.user || {}), isPro: true }
+              localStorage.setItem("user", JSON.stringify(updatedUser))
+              plansGrid.style.display = "none"
+              successMsg.style.display = "block"
+              trackClientEvent("payment_success")
+            } else {
+              if (result.error === "Invalid token" || result.error === "No token provided") {
+                clearSession()
+                showNotice("Session expired. Please sign in again, then retry payment activation.", true)
+                trackClientEvent("payment_error")
+                return
+              }
+              const supportLine = result.supportEmail ? ` Contact ${result.supportEmail}.` : ""
+              showNotice("Payment received but activation failed. Keep order ID: " + data.orderID + supportLine, true)
+              trackClientEvent("payment_error")
+            }
+          } catch (err) {
+            showNotice("Payment captured but activation call failed. Keep order ID: " + data.orderID + " Contact support@weldblueprints.ai.", true)
+            trackClientEvent("payment_error")
+          }
+        },
+
+        onError: function(err) {
+          console.error("PayPal error:", err)
+          showNotice("Payment failed. Please try again.", true)
+          trackClientEvent("payment_error")
+        }
+          }).render("#paypal-button-container")
+        }).catch(() => {
+          paypalFallback.style.display = "block"
+          paypalFallback.textContent = "PayPal SDK did not load. Refresh and allow paypal.com in your browser."
+        })
+      }
+    }
+    trackClientEvent("page_view_pricing")
+  </script>
+</body>
+</html>

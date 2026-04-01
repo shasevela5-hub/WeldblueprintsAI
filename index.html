@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeldBlueprints AI</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <style>
+    :root {
+      --bg: #111820;
+      --paper: #1a2430;
+      --ink: #eef3f8;
+      --muted: #b5c0cb;
+      --line: rgba(238, 242, 246, 0.16);
+      --line-strong: rgba(238, 242, 246, 0.28);
+      --orange: #e0672b;
+      --orange-soft: rgba(224, 103, 43, 0.14);
+      --blue: #4c8ac9;
+      --blue-soft: rgba(76, 138, 201, 0.12);
+      --green: #4caf78;
+      --red: #cf6666;
+      --card: rgba(28, 38, 49, 0.88);
+      --dark-card: #171c22;
+      --dark-card-2: #0f1419;
+      --radius: 28px;
+      --radius-sm: 18px;
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.36);
+      --max: 1240px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(224, 103, 43, 0.12), transparent 22%),
+        radial-gradient(circle at 92% 18%, rgba(76, 138, 201, 0.14), transparent 22%),
+        linear-gradient(180deg, #141d26 0%, #1a2530 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(21,21,21,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(21,21,21,0.03) 1px, transparent 1px);
+      background-size: 34px 34px;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      padding: 18px 0;
+    }
+
+    .topbar-inner {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 18px;
+      border: 1px solid var(--line);
+      background: rgba(20, 29, 39, 0.9);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #ef7d45, var(--orange));
+      color: #111;
+      font: 900 1.2rem/1 Arial, sans-serif;
+      letter-spacing: -0.03em;
+      box-shadow: 0 12px 26px rgba(214, 90, 31, 0.22);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 16px;
+      object-fit: cover;
+    }
+
+    .brand-text {
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 0.96;
+      font-size: 1.15rem;
+    }
+
+    .brand-text strong {
+      color: var(--orange);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .nav a:hover {
+      color: var(--ink);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn,
+    button {
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      transition: 0.2s ease;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 800;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 20px;
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.14);
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #12161b;
+      box-shadow: 0 12px 24px rgba(224, 103, 43, 0.24);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-accent {
+      background: var(--orange);
+      color: #111;
+      box-shadow: 0 12px 24px rgba(214, 90, 31, 0.16);
+    }
+
+    .btn-accent:hover {
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      padding: 12px 0 26px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .panel:hover {
+      border-color: var(--line-strong);
+    }
+
+    .hero-copy {
+      padding: 40px;
+      min-height: 590px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font: 700 0.78rem/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      background: var(--blue-soft);
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      line-height: 0.95;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 7vw, 6rem);
+      letter-spacing: -0.06em;
+      max-width: 10ch;
+    }
+
+    .hero-copy p {
+      max-width: 640px;
+      margin: 18px 0 0;
+      font-size: 1.14rem;
+      line-height: 1.72;
+      color: var(--muted);
+    }
+
+    .hero-bottom {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      gap: 14px;
+      align-items: end;
+      margin-top: 30px;
+    }
+
+    .metric {
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: rgba(10, 14, 20, 0.38);
+      border: 1px solid var(--line);
+      min-width: 150px;
+    }
+
+    .metric strong {
+      display: block;
+      font: 900 1.35rem/1 Arial, sans-serif;
+      margin-bottom: 6px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font: 0.9rem/1.45 Arial, sans-serif;
+    }
+
+    .hero-cta {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .hero-art {
+      padding: 20px;
+      min-height: 590px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background: linear-gradient(180deg, rgba(23,29,36,0.98), rgba(14,19,24,0.98));
+      color: #ecf0f4;
+      border-color: rgba(255,255,255,0.08);
+    }
+
+    .hero-art-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.88rem;
+      color: #bcc7d0;
+    }
+
+    .tag {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffd88b;
+    }
+
+    .sheet {
+      flex: 1;
+      border-radius: 24px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(180deg, rgba(13,19,26,0.97), rgba(8,13,18,0.98)),
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(255,255,255,0.04) 27px, rgba(255,255,255,0.04) 28px),
+        repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(255,255,255,0.04) 27px, rgba(255,255,255,0.04) 28px);
+      overflow: hidden;
+    }
+
+    .sheet-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      font: 0.82rem/1.5 Arial, sans-serif;
+      color: #b9c5cf;
+    }
+
+    .sheet-grid {
+      display: grid;
+      grid-template-columns: 1.18fr 0.82fr;
+      grid-template-rows: 1fr 0.78fr;
+      gap: 12px;
+      height: calc(100% - 28px);
+    }
+
+    .sheet-box {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(8, 16, 24, 0.65);
+      position: relative;
+      overflow: hidden;
+      padding: 14px;
+    }
+
+    .sheet-box h4 {
+      margin: 0 0 8px;
+      font: 700 0.78rem/1 Arial, sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #ffd27a;
+    }
+
+    .bp-line,
+    .bp-rect {
+      position: absolute;
+      background: #65b8ff;
+      box-shadow: 0 0 16px rgba(101, 184, 255, 0.2);
+    }
+
+    .bp-rect {
+      background: transparent;
+      border: 2px solid rgba(101,184,255,0.92);
+      box-shadow: none;
+    }
+
+    .section {
+      padding: 18px 0;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      margin: 10px 0 0;
+      max-width: 740px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1.04rem;
+    }
+
+    h2 {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      letter-spacing: -0.05em;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .feature {
+      padding: 24px;
+    }
+
+    .feature-no {
+      font: 900 2rem/1 Arial, sans-serif;
+      color: var(--orange);
+      opacity: 0.75;
+      margin-bottom: 12px;
+    }
+
+    .feature p {
+      margin-top: 12px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 0.98rem;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .generator {
+      padding: 30px;
+    }
+
+    .generator-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+
+    .generator-top p {
+      max-width: 690px;
+      margin-top: 10px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .generator-note {
+      border-radius: 20px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+      font: 0.9rem/1.55 Arial, sans-serif;
+      color: var(--muted);
+      min-width: 240px;
+    }
+
+    form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font: 700 0.83rem/1 Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.52);
+      color: var(--ink);
+      border-radius: 18px;
+      padding: 16px 18px;
+      font: 1rem/1.3 Arial, sans-serif;
+      outline: none;
+      transition: 0.18s ease;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #97a4b2;
+    }
+
+    select option {
+      background: #1a2430;
+      color: #eef3f8;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(27,79,140,0.34);
+      box-shadow: 0 0 0 4px rgba(27,79,140,0.08);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .hint {
+      color: var(--muted);
+      font: 0.83rem/1.4 Arial, sans-serif;
+    }
+
+    .generator-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 16px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .status-card,
+    .mini-card {
+      padding: 24px;
+    }
+
+    .status-card h3,
+    .mini-card h3 {
+      font-size: 1.38rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .status-card p,
+    .mini-card p {
+      color: var(--muted);
+      line-height: 1.65;
+      margin: 0 0 14px;
+      font-size: 0.98rem;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .status-box {
+      border-radius: 20px;
+      padding: 18px;
+      background: rgba(9, 14, 20, 0.46);
+      border: 1px solid var(--line);
+      margin-bottom: 12px;
+    }
+
+    .status-box strong {
+      display: block;
+      margin-bottom: 8px;
+      font: 800 0.98rem/1 Arial, sans-serif;
+    }
+
+    .status-box span {
+      display: block;
+      color: var(--muted);
+      font: 0.94rem/1.6 Arial, sans-serif;
+    }
+
+    .status-success {
+      background: rgba(46, 125, 80, 0.08);
+      border-color: rgba(46, 125, 80, 0.18);
+    }
+
+    .status-error {
+      background: rgba(179, 74, 74, 0.08);
+      border-color: rgba(179, 74, 74, 0.18);
+    }
+
+    .flow-steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 12px 0 18px;
+    }
+
+    .flow-step {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+      color: var(--muted);
+      font: 0.76rem/1.2 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    .flow-step.is-active {
+      border-color: rgba(27,79,140,0.28);
+      background: rgba(27,79,140,0.08);
+      color: var(--blue);
+    }
+
+    .flow-step.is-done {
+      border-color: rgba(46,125,80,0.24);
+      background: rgba(46,125,80,0.08);
+      color: var(--green);
+    }
+
+    .field-error {
+      display: none;
+      color: var(--red);
+      font: 0.82rem/1.35 Arial, sans-serif;
+      margin-top: 6px;
+    }
+
+    .field-error.show {
+      display: block;
+    }
+
+    input.invalid,
+    select.invalid,
+    textarea.invalid {
+      border-color: rgba(179, 74, 74, 0.42);
+      box-shadow: 0 0 0 4px rgba(179, 74, 74, 0.08);
+    }
+
+    .form-helper {
+      margin-top: 4px;
+      color: var(--muted);
+      font: 0.85rem/1.4 Arial, sans-serif;
+    }
+
+    .btn:disabled,
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 30;
+      display: grid;
+      gap: 10px;
+      width: min(360px, calc(100% - 24px));
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(20, 29, 39, 0.95);
+      box-shadow: var(--shadow);
+      font: 0.9rem/1.45 Arial, sans-serif;
+      color: var(--ink);
+    }
+
+    .toast.success {
+      border-color: rgba(46,125,80,0.28);
+      background: #f1f9f4;
+    }
+
+    .toast.error {
+      border-color: rgba(179,74,74,0.28);
+      background: #fdf3f3;
+    }
+
+    .summary {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+      font: 0.92rem/1.4 Arial, sans-serif;
+      color: var(--muted);
+    }
+
+    .summary-row strong {
+      color: var(--ink);
+    }
+
+    .gallery-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .gallery-count {
+      color: var(--muted);
+      font: 0.92rem/1.4 Arial, sans-serif;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .gallery-card {
+      padding: 20px;
+      min-height: 220px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gallery-card::before {
+      content: "";
+      position: absolute;
+      inset: auto -20px -34px auto;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(214,90,31,0.12), transparent 70%);
+    }
+
+    .gallery-card .emoji {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+
+    .gallery-card h3 {
+      font-size: 1.4rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+    }
+
+    .gallery-card p {
+      margin: 10px 0 16px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.95rem;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .gallery-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font: 0.84rem/1.4 Arial, sans-serif;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .gallery-tag {
+      display: inline-block;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(9, 14, 20, 0.38);
+      border: 1px solid var(--line);
+      font: 0.76rem/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .empty-gallery {
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      font: 1rem/1.7 Arial, sans-serif;
+    }
+
+    .footer {
+      padding: 26px 0 54px;
+    }
+
+    .footer-card {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 22px 24px;
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+      box-shadow: var(--shadow);
+      font: 0.95rem/1.5 Arial, sans-serif;
+      color: var(--muted);
+    }
+
+    .loading {
+      pointer-events: none;
+    }
+
+    .loading::after {
+      content: "Processing request...";
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      z-index: 40;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(20, 29, 39, 0.95);
+      color: var(--ink);
+      font: 700 0.83rem/1 Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 1060px) {
+      .hero-grid,
+      .main-grid,
+      .features,
+      .gallery {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .generator-top {
+        flex-direction: column;
+        align-items: start;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner {
+        grid-template-columns: 1fr;
+        border-radius: 26px;
+      }
+
+      .nav,
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .hero-grid,
+      .main-grid,
+      .features,
+      .gallery,
+      .form-grid,
+      .flow-steps {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-copy,
+      .hero-art,
+      .generator,
+      .status-card,
+      .mini-card {
+        padding: 22px;
+      }
+
+      .hero-copy,
+      .hero-art {
+        min-height: auto;
+      }
+
+      .hero-bottom {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top">
+        <div class="brand-mark"><img src="/logo.svg" alt="WeldBlueprints AI logo" /></div>
+        <div class="brand-text">WELDBLUEPRINTS <strong>AI</strong></div>
+      </a>
+
+      <nav class="nav">
+        <a href="#features">Features</a>
+        <a href="#generator">Generator</a>
+        <a href="#gallery">Projects</a>
+        <a href="/pricing.html">Pricing</a>
+        <a href="/login.html">Login</a>
+      </nav>
+
+      <div class="actions">
+        <a class="btn btn-ghost" id="authButton" href="/login.html">Sign In</a>
+        <button class="btn btn-ghost" id="logoutButton" type="button" style="display:none;">Logout</button>
+        <a class="btn btn-primary" href="#generator">Build PDF</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <section class="panel hero-copy">
+          <div>
+            <div class="eyebrow">Shop-ready blueprint generation</div>
+            <h1>From shop idea to cut list in one pass.</h1>
+            <p>
+              Generate a fabrication blueprint with dimensions, weld settings, parts, and build steps.
+              Built for carts, benches, trailers, gates, furniture, and practical shop projects that need a clean PDF fast.
+            </p>
+          </div>
+
+          <div class="hero-bottom">
+            <div class="metric">
+              <strong>PDF</strong>
+              <span>preview inline or download directly</span>
+            </div>
+            <div class="metric">
+              <strong>Live</strong>
+              <span>project gallery pulled from your server</span>
+            </div>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="#generator">Generate Now</a>
+              <a class="btn btn-accent" href="#gallery">Browse Projects</a>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel hero-art">
+          <div class="hero-art-head">
+            <div class="tag">Blueprint Preview</div>
+            <div>A3 PDF output</div>
+          </div>
+
+          <div class="sheet">
+            <div class="sheet-top">
+              <span>WELDBLUEPRINTS AI</span>
+              <span>WELDING TABLE / 48 x 30 x 34</span>
+            </div>
+
+            <div class="sheet-grid">
+              <div class="sheet-box">
+                <h4>Front Elevation</h4>
+                <div class="bp-rect" style="left:16%; top:22%; width:42%; height:54%;"></div>
+                <div class="bp-line" style="left:24%; top:22%; width:2px; height:54%;"></div>
+                <div class="bp-line" style="left:37%; top:22%; width:2px; height:54%;"></div>
+                <div class="bp-line" style="left:24%; top:42%; width:28%; height:2px;"></div>
+                <div class="bp-line" style="left:24%; top:60%; width:28%; height:2px;"></div>
+              </div>
+
+              <div class="sheet-box">
+                <h4>Side</h4>
+                <div class="bp-rect" style="left:24%; top:28%; width:42%; height:50%;"></div>
+                <div class="bp-line" style="left:30%; top:54%; width:26%; height:2px;"></div>
+              </div>
+
+              <div class="sheet-box">
+                <h4>Top View</h4>
+                <div class="bp-rect" style="left:13%; top:25%; width:52%; height:44%;"></div>
+                <div class="bp-line" style="left:13%; top:47%; width:52%; height:2px;"></div>
+                <div class="bp-line" style="left:28%; top:25%; width:2px; height:44%;"></div>
+                <div class="bp-line" style="left:44%; top:25%; width:2px; height:44%;"></div>
+              </div>
+
+              <div class="sheet-box">
+                <h4>Data</h4>
+                <div style="font: 0.86rem/1.6 Arial, sans-serif; color:#c2ccd6;">
+                  Process: MIG<br>
+                  Material: 3/16 A36<br>
+                  Gas: C25<br>
+                  Voltage: 19.5V<br>
+                  WFS: 330 ipm
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Designed for practical fabrication work.</h2>
+            <p>
+              One page, one form, one blueprint. Set the real build parameters and get a PDF structured for shop use instead of a generic export.
+            </p>
+          </div>
+        </div>
+
+        <div class="features">
+          <article class="panel feature">
+            <div class="feature-no">01</div>
+            <h3>Project-driven</h3>
+            <p>Start from a real build like a cart, workbench, trailer, gate, fire pit, or furniture piece and generate a structured output around it.</p>
+          </article>
+
+          <article class="panel feature">
+            <div class="feature-no">02</div>
+            <h3>Parameter-aware</h3>
+            <p>Feed in dimensions, process, gas, filler, and thickness so the resulting PDF reflects the setup you actually plan to run.</p>
+          </article>
+
+          <article class="panel feature">
+            <div class="feature-no">03</div>
+            <h3>Shop-readable</h3>
+            <p>Get a layout with parts, dimensions, weld notes, and build sequence instead of a vague one-page mockup.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="generator">
+      <div class="wrap main-grid">
+        <section class="panel generator">
+          <div class="generator-top">
+            <div>
+              <h2>Generate a blueprint</h2>
+              <p>
+                Set the project, dimensions, process, and material data. Then preview the PDF in-browser or download it directly from your server.
+              </p>
+            </div>
+            <div class="generator-note">
+              The PDF route uses your saved auth token. Sign in first if generation is blocked.
+            </div>
+          </div>
+
+          <div class="flow-steps" id="flowSteps">
+            <div class="flow-step" data-step="1">1 Project</div>
+            <div class="flow-step" data-step="2">2 Dimensions</div>
+            <div class="flow-step" data-step="3">3 Process</div>
+            <div class="flow-step" data-step="4">4 Preview</div>
+            <div class="flow-step" data-step="5">5 Download</div>
+          </div>
+
+          <form id="blueprintForm">
+            <div class="form-grid">
+              <div class="field">
+                <label for="project">Project</label>
+                <select id="project" name="project" required>
+                  <option value="Welding Cart">Welding Cart</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="dimensions">Dimensions</label>
+                <input id="dimensions" name="dimensions" value="48x30x34" placeholder="48x30x34" required />
+                <div class="hint">Use `length x width x height` in inches.</div>
+                <div class="field-error" id="dimensionsError">Use format like 48x30x34 (three positive numbers).</div>
+              </div>
+
+              <div class="field">
+                <label for="welder">Welder</label>
+                <select id="welder" name="welder">
+                  <option value="Lincoln 210 MP">Lincoln 210 MP</option>
+                  <option value="Miller 211">Miller 211</option>
+                  <option value="Generic MIG">Generic MIG</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="process">Process</label>
+                <select id="process" name="process">
+                  <option value="MIG">MIG</option>
+                  <option value="Flux Core">Flux Core</option>
+                  <option value="TIG">TIG</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="wire">Wire / Rod</label>
+                <input id="wire" name="wire" value="ER70S-6" placeholder="ER70S-6" />
+              </div>
+
+              <div class="field">
+                <label for="wiresize">Wire Size</label>
+                <select id="wiresize" name="wiresize">
+                  <option value=".030">.030</option>
+                  <option value=".035">.035</option>
+                  <option value="1/16">1/16</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="gas">Shielding Gas</label>
+                <select id="gas" name="gas">
+                  <option value="C25">C25</option>
+                  <option value="100% CO2">100% CO2</option>
+                  <option value="Argon">Argon</option>
+                  <option value="None">None</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="thickness">Thickness</label>
+                <select id="thickness" name="thickness">
+                  <option value="1/8">1/8</option>
+                  <option value="3/16" selected>3/16</option>
+                  <option value="1/4">1/4</option>
+                  <option value="1/2">1/2</option>
+                </select>
+              </div>
+
+              <div class="field full">
+                <label for="notes">Notes</label>
+                <textarea id="notes" placeholder="Optional planning notes, add-ons, finish, caster type, or custom requirements."></textarea>
+              </div>
+            </div>
+
+            <div class="generator-actions">
+              <button type="submit" class="btn btn-primary" id="downloadBtn">Download PDF</button>
+              <button type="button" class="btn btn-ghost" id="previewBtn">Preview PDF</button>
+            </div>
+            <div class="form-helper" id="formHelper">Complete required fields to continue.</div>
+          </form>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel status-card">
+            <h3>Session</h3>
+            <p>The generator uses your browser token when it calls the protected PDF route.</p>
+
+            <div id="statusMessage" class="status-box">
+              <strong>Ready</strong>
+              <span>Fill out the form and generate a blueprint.</span>
+            </div>
+
+            <div class="summary">
+              <div class="summary-row">
+                <span>Token</span>
+                <strong id="tokenState">Checking...</strong>
+              </div>
+              <div class="summary-row">
+                <span>Project</span>
+                <strong id="selectedProject">Welding Cart</strong>
+              </div>
+              <div class="summary-row">
+                <span>Dimensions</span>
+                <strong id="selectedDims">48x30x34</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel mini-card">
+            <h3>Flow</h3>
+            <p>Login, set your build data, then choose preview or download. The page sends a POST request to `/generate-blueprint` and opens the PDF result.</p>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="gallery">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Project gallery.</h2>
+            <p>The gallery below loads from your API automatically, so new server-side projects show up here without editing the page.</p>
+          </div>
+        </div>
+
+        <div class="gallery-toolbar">
+          <div class="gallery-count" id="galleryCount">Loading projects...</div>
+        </div>
+
+        <div class="gallery" id="galleryGrid"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="footer-card">
+          <div>
+            <strong style="display:block; color:var(--ink); margin-bottom:6px;">WeldBlueprints AI</strong>
+            A cleaner interface for generating fabrication-ready blueprint PDFs.
+          </div>
+        <div>
+          <a href="/login.html">Login</a> |
+          <a href="/pricing.html">Pricing</a> |
+          <a href="#generator">Generator</a> |
+          <a href="/terms.html">Terms</a> |
+          <a href="/privacy.html">Privacy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  </main>
+
+  <script>
+    const form = document.getElementById("blueprintForm")
+    const previewBtn = document.getElementById("previewBtn")
+    const downloadBtn = document.getElementById("downloadBtn")
+    const statusMessage = document.getElementById("statusMessage")
+    const tokenState = document.getElementById("tokenState")
+    const selectedProject = document.getElementById("selectedProject")
+    const selectedDims = document.getElementById("selectedDims")
+    const projectInput = document.getElementById("project")
+    const dimensionsInput = document.getElementById("dimensions")
+    const processInput = document.getElementById("process")
+    const wireInput = document.getElementById("wire")
+    const dimensionsError = document.getElementById("dimensionsError")
+    const formHelper = document.getElementById("formHelper")
+    const flowSteps = Array.from(document.querySelectorAll("#flowSteps .flow-step"))
+    const galleryGrid = document.getElementById("galleryGrid")
+    const galleryCount = document.getElementById("galleryCount")
+    const authButton = document.getElementById("authButton")
+    const logoutButton = document.getElementById("logoutButton")
+    const toastWrap = document.getElementById("toastWrap") || (() => {
+      const el = document.createElement("div")
+      el.id = "toastWrap"
+      el.className = "toast-wrap"
+      document.body.appendChild(el)
+      return el
+    })()
+    const TRUSTED_EXTERNAL_HOSTS = new Set(["www.paypal.com", "paypal.com"])
+
+    let isBusy = false
+
+    function trackClientEvent(eventName) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: eventName })
+      }).catch(() => {})
+    }
+
+    function isTrustedUrl(rawUrl) {
+      try {
+        const parsed = new URL(rawUrl, window.location.origin)
+        if (parsed.origin === window.location.origin) return true
+        if (parsed.protocol === "blob:" || parsed.protocol === "data:") return true
+        return TRUSTED_EXTERNAL_HOSTS.has(parsed.hostname)
+      } catch (_) {
+        return false
+      }
+    }
+
+    function safeOpenUrl(rawUrl, target = "_blank") {
+      if (!isTrustedUrl(rawUrl)) {
+        setStatus("Blocked link", "An untrusted external URL was blocked for safety.", "error")
+        pushToast("Blocked untrusted external URL.", "error")
+        return null
+      }
+      return window.open(rawUrl, target, "noopener,noreferrer")
+    }
+
+    function getToken() {
+      return localStorage.getItem("token") || sessionStorage.getItem("token") || ""
+    }
+
+    function clearSession(reasonText) {
+      localStorage.removeItem("token")
+      sessionStorage.removeItem("token")
+      localStorage.removeItem("user")
+      updateTokenState()
+      setStatus("Session expired", reasonText || "Please sign in again to continue generating blueprints.", "error")
+      pushToast("Session expired. Please sign in again.", "error")
+    }
+
+    function pushToast(text, type) {
+      const el = document.createElement("div")
+      el.className = "toast" + (type === "success" ? " success" : type === "error" ? " error" : "")
+      el.textContent = text
+      toastWrap.appendChild(el)
+      setTimeout(() => el.remove(), 3800)
+    }
+
+    function updateTokenState() {
+      const hasToken = !!getToken()
+      tokenState.textContent = hasToken ? "Present" : "Missing"
+      tokenState.style.color = hasToken ? "#2e7d50" : "#b34a4a"
+      updateHeaderAuth(hasToken)
+      updateActionState()
+    }
+
+    function updateHeaderAuth(hasToken) {
+      const user = JSON.parse(localStorage.getItem("user") || "{}")
+      if (hasToken) {
+        authButton.textContent = user && user.email ? user.email : "Account"
+        authButton.href = "/dashboard.html"
+        logoutButton.style.display = "inline-flex"
+      } else {
+        authButton.textContent = "Sign In"
+        authButton.href = "/login.html"
+        logoutButton.style.display = "none"
+      }
+    }
+
+    function setStatus(title, text, type) {
+      statusMessage.className = "status-box"
+      if (type === "success") statusMessage.classList.add("status-success")
+      if (type === "error") statusMessage.classList.add("status-error")
+      statusMessage.innerHTML = "<strong>" + title + "</strong><span>" + text + "</span>"
+    }
+
+    function parseDimensions(value) {
+      const cleaned = String(value || "").trim().toLowerCase()
+      const m = cleaned.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/)
+      if (!m) return null
+      const nums = m.slice(1).map(Number)
+      if (nums.some(v => !Number.isFinite(v) || v <= 0 || v > 1000)) return null
+      return nums
+    }
+
+    function validateForm() {
+      const hasProject = !!projectInput.value
+      const dims = parseDimensions(dimensionsInput.value)
+      const hasProcess = !!processInput.value
+      const hasWire = !!wireInput.value.trim()
+
+      dimensionsInput.classList.toggle("invalid", !dims)
+      dimensionsError.classList.toggle("show", !dims)
+
+      if (!hasProject) return { ok: false, step: 1, message: "Choose a project." }
+      if (!dims) return { ok: false, step: 2, message: "Enter dimensions like 48x30x34." }
+      if (!hasProcess || !hasWire) return { ok: false, step: 3, message: "Set process and filler wire/rod." }
+      return { ok: true, step: 4, message: "Ready to preview or download your blueprint." }
+    }
+
+    function updateFlowStep(activeStep, complete) {
+      flowSteps.forEach((stepEl, idx) => {
+        const stepNo = idx + 1
+        stepEl.classList.remove("is-active", "is-done")
+        if (complete && stepNo <= 4) stepEl.classList.add("is-done")
+        if (!complete && stepNo < activeStep) stepEl.classList.add("is-done")
+        if (!complete && stepNo === activeStep) stepEl.classList.add("is-active")
+        if (complete && stepNo === 5) stepEl.classList.add("is-active")
+      })
+    }
+
+    function syncSummary() {
+      selectedProject.textContent = projectInput.value
+      selectedDims.textContent = dimensionsInput.value || "-"
+      const check = validateForm()
+      updateFlowStep(check.step, false)
+      formHelper.textContent = check.message
+      updateActionState()
+    }
+
+    function setBusy(nextBusy, label) {
+      isBusy = nextBusy
+      document.body.classList.toggle("loading", nextBusy)
+      downloadBtn.disabled = nextBusy
+      previewBtn.disabled = nextBusy
+      if (nextBusy && label) setStatus(label, "Please wait while we process your request.", "")
+      updateActionState()
+    }
+
+    function updateActionState() {
+      const hasToken = !!getToken()
+      const check = validateForm()
+      const enabled = hasToken && check.ok && !isBusy
+      downloadBtn.disabled = !enabled
+      previewBtn.disabled = !enabled
+      if (!hasToken) formHelper.textContent = "Sign in to enable preview and download."
+    }
+
+    async function authFetch(url, options) {
+      const token = getToken()
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...(options && options.headers ? options.headers : {}),
+          "Authorization": "Bearer " + token
+        }
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        let data = null
+        try { data = await response.clone().json() } catch (_) {}
+        if (data && (data.error === "Invalid token" || data.error === "No token provided" || data.error === "login_required")) {
+          clearSession("Your login token is no longer valid. Please sign in again.")
+        }
+      }
+      return response
+    }
+
+    async function verifySessionOnLoad() {
+      const token = getToken()
+      if (!token) return
+      try {
+        const response = await authFetch("/api/auth/me", { method: "GET" })
+        if (!response.ok && (response.status === 401 || response.status === 403)) {
+          clearSession("Your previous session expired. Sign in again.")
+        }
+      } catch (_) {}
+    }
+
+    function formDataObject() {
+      return {
+        project: document.getElementById("project").value,
+        dimensions: document.getElementById("dimensions").value.trim(),
+        welder: document.getElementById("welder").value,
+        process: document.getElementById("process").value,
+        wire: document.getElementById("wire").value.trim(),
+        wiresize: document.getElementById("wiresize").value,
+        gas: document.getElementById("gas").value,
+        thickness: document.getElementById("thickness").value,
+        notes: document.getElementById("notes").value
+      }
+    }
+
+    function populateProjectSelect(entries) {
+      const previous = projectInput.value
+      projectInput.innerHTML = ""
+
+      entries.forEach(([name, item], idx) => {
+        const option = document.createElement("option")
+        option.value = name
+        option.textContent = item && item.category ? `${name} (${item.category})` : name
+        if (idx === 0 || name === previous) option.selected = true
+        projectInput.appendChild(option)
+      })
+    }
+
+    async function requestBlueprint(previewMode) {
+      trackClientEvent("generate_click")
+      const token = getToken()
+      updateTokenState()
+      syncSummary()
+      const check = validateForm()
+
+      if (!token) {
+        setStatus(
+          "Login required",
+          "Your server route expects an auth token. Sign in first, then generate the blueprint.",
+          "error"
+        )
+        pushToast("Sign in first to generate blueprints.", "error")
+        return
+      }
+
+      if (!check.ok) {
+        setStatus("Missing input", check.message, "error")
+        pushToast(check.message, "error")
+        return
+      }
+
+      const payload = formDataObject()
+      const url = previewMode ? "/generate-blueprint?preview=1" : "/generate-blueprint"
+
+      setBusy(true, previewMode ? "Opening preview" : "Generating PDF")
+
+      try {
+        const response = await authFetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        })
+
+        const contentType = response.headers.get("content-type") || ""
+
+        if (!response.ok) {
+          if (contentType.includes("application/json")) {
+            const data = await response.json()
+            const message = data.message || data.error || "Blueprint generation failed."
+            if (response.status === 401 || response.status === 403) {
+              clearSession("Session expired. Please sign in again.")
+            } else {
+              setStatus("Request failed", message, "error")
+              pushToast(message, "error")
+            }
+          } else {
+            setStatus("Request failed", "The server returned an error while generating the blueprint.", "error")
+            pushToast("The server returned an error while generating the blueprint.", "error")
+          }
+          return
+        }
+
+        const blob = await response.blob()
+        const fileUrl = URL.createObjectURL(blob)
+
+        if (previewMode) {
+          const opened = safeOpenUrl(fileUrl, "_blank")
+          if (opened) {
+            setStatus("Preview opened", "The blueprint PDF was opened in a new tab.", "success")
+            pushToast("Preview opened in a new tab.", "success")
+            updateFlowStep(4, false)
+            trackClientEvent("generate_success")
+          }
+        } else {
+          const a = document.createElement("a")
+          a.href = fileUrl
+          a.download = payload.project.toLowerCase().replace(/\s+/g, "-") + "-blueprint.pdf"
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          setStatus("Download started", "Your blueprint PDF was generated successfully.", "success")
+          pushToast("Blueprint PDF download started.", "success")
+          updateFlowStep(5, true)
+          trackClientEvent("generate_success")
+        }
+
+        setTimeout(() => URL.revokeObjectURL(fileUrl), 10000)
+      } catch (err) {
+        setStatus("Network error", err.message || "Could not reach the server.", "error")
+        pushToast(err.message || "Could not reach the server.", "error")
+        trackClientEvent("generate_error")
+      } finally {
+        setBusy(false)
+      }
+    }
+
+    function cardMarkup(name, item) {
+      const difficulty = item.difficulty || "Project"
+      const time = item.time || "Flexible"
+      const description = item.description || "Custom fabrication project."
+      const category = item.category || "General"
+      const emoji = item.image || "W"
+
+      return `
+        <article class="panel gallery-card">
+          <div class="emoji">${emoji}</div>
+          <h3>${name}</h3>
+          <p>${description}</p>
+          <div class="gallery-meta">
+            <span>${difficulty}</span>
+            <span>${time}</span>
+          </div>
+          <div class="gallery-tag">${category}</div>
+        </article>
+      `
+    }
+
+    async function loadGallery() {
+      galleryGrid.innerHTML = ""
+      galleryCount.textContent = "Loading projects..."
+
+      try {
+        const response = await fetch("/api/gallery")
+        if (!response.ok) throw new Error("Failed to load gallery")
+
+        const data = await response.json()
+        const entries = Object.entries(data || {})
+
+        if (!entries.length) {
+          galleryGrid.innerHTML = `<div class="panel empty-gallery">No projects found in the gallery yet.</div>`
+          galleryCount.textContent = "0 projects"
+          return
+        }
+
+        galleryCount.textContent = `${entries.length} projects available`
+        populateProjectSelect(entries)
+        syncSummary()
+
+        galleryGrid.innerHTML = entries
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([name, item]) => cardMarkup(name, item))
+          .join("")
+      } catch (err) {
+        galleryGrid.innerHTML = `<div class="panel empty-gallery">Could not load the project gallery from the server.</div>`
+        galleryCount.textContent = "Gallery unavailable"
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault()
+      await requestBlueprint(false)
+    })
+
+    previewBtn.addEventListener("click", async () => {
+      await requestBlueprint(true)
+    })
+
+    logoutButton.addEventListener("click", () => {
+      localStorage.removeItem("token")
+      sessionStorage.removeItem("token")
+      localStorage.removeItem("user")
+      updateTokenState()
+      setStatus("Logged out", "Your browser session was cleared.", "success")
+      pushToast("Logged out successfully.", "success")
+    })
+
+    projectInput.addEventListener("change", syncSummary)
+    dimensionsInput.addEventListener("input", syncSummary)
+    processInput.addEventListener("change", syncSummary)
+    wireInput.addEventListener("input", syncSummary)
+
+    updateTokenState()
+    syncSummary()
+    loadGallery()
+    verifySessionOnLoad()
+    trackClientEvent("page_view_home")
+  </script>
+
+</body>
+</html>

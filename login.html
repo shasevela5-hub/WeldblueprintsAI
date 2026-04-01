@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | WeldBlueprints AI</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <style>
+    :root {
+      --bg: #111820;
+      --paper: #1a2430;
+      --ink: #eef3f8;
+      --muted: #b5c0cb;
+      --line: rgba(238, 242, 246, 0.16);
+      --orange: #e0672b;
+      --blue: #4c8ac9;
+      --green: #4caf78;
+      --red: #cf6666;
+      --card: rgba(28, 38, 49, 0.88);
+      --radius: 28px;
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.36);
+      --max: 1140px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(224, 103, 43, 0.12), transparent 22%),
+        radial-gradient(circle at 92% 18%, rgba(76, 138, 201, 0.14), transparent 22%),
+        linear-gradient(180deg, #141d26 0%, #1a2530 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(21,21,21,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(21,21,21,0.03) 1px, transparent 1px);
+      background-size: 34px 34px;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      padding: 18px 0;
+    }
+
+    .topbar-inner {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 18px;
+      border: 1px solid var(--line);
+      background: rgba(20, 29, 39, 0.9);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #ef7d45, var(--orange));
+      color: #111;
+      font: 900 1.2rem/1 Arial, sans-serif;
+      letter-spacing: -0.03em;
+      box-shadow: 0 12px 26px rgba(214, 90, 31, 0.22);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 16px;
+      object-fit: cover;
+    }
+
+    .brand-text {
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 0.96;
+      font-size: 1.15rem;
+    }
+
+    .brand-text strong {
+      color: var(--orange);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .nav a:hover {
+      color: var(--ink);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn,
+    button {
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      transition: 0.2s ease;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 800;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 20px;
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.14);
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #12161b;
+      box-shadow: 0 12px 24px rgba(224, 103, 43, 0.24);
+    }
+
+    .hero {
+      padding: 12px 0 44px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .panel:hover {
+      border-color: rgba(238, 242, 246, 0.24);
+    }
+
+    .info {
+      padding: 34px;
+      min-height: 620px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font: 700 0.78rem/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      background: rgba(27, 79, 140, 0.06);
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      line-height: 0.95;
+    }
+
+    h1 {
+      font-size: clamp(2.7rem, 6vw, 5.2rem);
+      letter-spacing: -0.06em;
+      max-width: 9ch;
+    }
+
+    h2 {
+      font-size: 2.2rem;
+      letter-spacing: -0.05em;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .info p {
+      margin-top: 18px;
+      max-width: 560px;
+    }
+
+    .steps {
+      display: grid;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(9, 14, 20, 0.38);
+      border: 1px solid var(--line);
+    }
+
+    .step-no {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(214, 90, 31, 0.1);
+      color: var(--orange);
+      font: 900 1rem/1 Arial, sans-serif;
+    }
+
+    .auth {
+      padding: 28px;
+    }
+
+    .tabs {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      background: rgba(9, 14, 20, 0.34);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font: 800 0.95rem/1 Arial, sans-serif;
+    }
+
+    .tab.active {
+      background: var(--ink);
+      color: white;
+    }
+
+    .panel-form {
+      display: none;
+    }
+
+    .panel-form.active {
+      display: block;
+    }
+
+    .form-head {
+      margin-bottom: 18px;
+    }
+
+    .form-head p {
+      margin-top: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font: 700 0.83rem/1 Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.52);
+      color: var(--ink);
+      border-radius: 18px;
+      padding: 16px 18px;
+      font: 1rem/1.3 Arial, sans-serif;
+      outline: none;
+      transition: 0.18s ease;
+    }
+
+    input::placeholder {
+      color: #97a4b2;
+    }
+
+    select option {
+      background: #1a2430;
+      color: #eef3f8;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: rgba(27,79,140,0.34);
+      box-shadow: 0 0 0 4px rgba(27,79,140,0.08);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .status {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+    }
+
+    .status strong {
+      display: block;
+      margin-bottom: 8px;
+      font: 800 0.98rem/1 Arial, sans-serif;
+      color: var(--ink);
+    }
+
+    .status span {
+      display: block;
+      color: var(--muted);
+      font: 0.94rem/1.6 Arial, sans-serif;
+    }
+
+    .status.success {
+      background: rgba(46, 125, 80, 0.08);
+      border-color: rgba(46, 125, 80, 0.18);
+    }
+
+    .status.error {
+      background: rgba(179, 74, 74, 0.08);
+      border-color: rgba(179, 74, 74, 0.18);
+    }
+
+    .session-box {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(9, 14, 20, 0.38);
+    }
+
+    .session-box h3 {
+      font-size: 1.35rem;
+      margin-bottom: 10px;
+      letter-spacing: -0.04em;
+    }
+
+    .session-box p {
+      margin-bottom: 14px;
+    }
+
+    .footer {
+      padding: 8px 0 28px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font: 0.9rem/1.5 Arial, sans-serif;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .info,
+      .auth {
+        padding: 22px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner {
+        grid-template-columns: 1fr;
+        border-radius: 26px;
+      }
+
+      .nav,
+      .actions {
+        justify-content: flex-start;
+      }
+
+      h1 {
+        font-size: 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/index.html">
+        <div class="brand-mark"><img src="/logo.svg" alt="WeldBlueprints AI logo" /></div>
+        <div class="brand-text">WELDBLUEPRINTS <strong>AI</strong></div>
+      </a>
+
+      <nav class="nav">
+        <a href="/index.html#features">Features</a>
+        <a href="/index.html#generator">Generator</a>
+        <a href="/index.html#gallery">Projects</a>
+        <a href="/pricing.html">Pricing</a>
+      </nav>
+
+      <div class="actions">
+        <a class="btn btn-ghost" href="/index.html">Back Home</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="hero">
+    <div class="wrap hero-grid">
+      <section class="panel info">
+        <div>
+          <div class="eyebrow">Account Access</div>
+          <h1>Sign in, save your token, and generate PDFs.</h1>
+          <p>
+            Your browser stores the token after login so the generator page can call the protected
+            blueprint route without asking you again every time.
+          </p>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-no">1</div>
+            <div>
+              <strong style="display:block; margin-bottom:6px;">Create or access your account</strong>
+              <p>Register once, or log in with the account you already use for saved projects and settings.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-no">2</div>
+            <div>
+              <strong style="display:block; margin-bottom:6px;">Store the browser token</strong>
+              <p>On success, the page saves your JWT and user state to local storage so pricing and generation stay in sync.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-no">3</div>
+            <div>
+              <strong style="display:block; margin-bottom:6px;">Go back and generate</strong>
+              <p>Return to the main generator, preview the blueprint, or download the PDF directly.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel auth">
+        <div class="tabs">
+          <button class="tab active" id="loginTab" type="button">Login</button>
+          <button class="tab" id="registerTab" type="button">Create Account</button>
+        </div>
+
+        <section id="loginPanel" class="panel-form active">
+          <div class="form-head">
+            <h2>Login</h2>
+            <p>Use your existing account to enable blueprint generation.</p>
+          </div>
+
+          <form id="loginForm">
+            <div class="grid">
+              <div class="field full">
+                <label for="loginEmail">Email</label>
+                <input id="loginEmail" type="email" placeholder="you@example.com" required />
+              </div>
+
+              <div class="field full">
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" type="password" placeholder="Your password" required />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Login</button>
+              <a class="btn btn-ghost" href="/index.html">Back To Generator</a>
+            </div>
+          </form>
+        </section>
+
+        <section id="registerPanel" class="panel-form">
+          <div class="form-head">
+            <h2>Create account</h2>
+            <p>Register a new account and store the token immediately after signup.</p>
+          </div>
+
+          <form id="registerForm">
+            <div class="grid">
+              <div class="field full">
+                <label for="registerUsername">Username</label>
+                <input id="registerUsername" type="text" placeholder="Shop name or your name" required />
+              </div>
+
+              <div class="field full">
+                <label for="registerEmail">Email</label>
+                <input id="registerEmail" type="email" placeholder="you@example.com" required />
+              </div>
+
+              <div class="field full">
+                <label for="registerPassword">Password</label>
+                <input id="registerPassword" type="password" placeholder="Create a password" required />
+              </div>
+
+              <div class="field">
+                <label for="registerWelderModel">Welder Model</label>
+                <select id="registerWelderModel">
+                  <option value="Lincoln 210 MP">Lincoln 210 MP</option>
+                  <option value="Miller 211">Miller 211</option>
+                  <option value="Generic MIG">Generic MIG</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="registerExperience">Experience</label>
+                <select id="registerExperience">
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Expert">Expert</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Create Account</button>
+              <a class="btn btn-ghost" href="/index.html">Back To Generator</a>
+            </div>
+          </form>
+        </section>
+
+        <div id="statusBox" class="status">
+          <strong>Ready</strong>
+          <span>Login or create an account to continue.</span>
+        </div>
+
+        <div class="session-box">
+          <h3>Browser session</h3>
+          <p id="sessionState">No active token stored yet.</p>
+          <div class="form-actions">
+            <button class="btn btn-ghost" id="goHomeBtn" type="button">Open Generator</button>
+            <button class="btn btn-ghost" id="logoutBtn" type="button">Clear Token</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="wrap footer">
+    <div class="footer-links">
+      <a href="/index.html">Home</a> |
+      <a href="/pricing.html">Pricing</a> |
+      <a href="/terms.html">Terms</a> |
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </div>
+
+  <script>
+    const TRUSTED_EXTERNAL_HOSTS = new Set(["www.paypal.com", "paypal.com"])
+    const loginTab = document.getElementById("loginTab")
+    const registerTab = document.getElementById("registerTab")
+    const loginPanel = document.getElementById("loginPanel")
+    const registerPanel = document.getElementById("registerPanel")
+    const loginForm = document.getElementById("loginForm")
+    const registerForm = document.getElementById("registerForm")
+    const statusBox = document.getElementById("statusBox")
+    const sessionState = document.getElementById("sessionState")
+    const logoutBtn = document.getElementById("logoutBtn")
+    const goHomeBtn = document.getElementById("goHomeBtn")
+
+    function setStatus(title, text, type) {
+      statusBox.className = "status"
+      if (type === "success") statusBox.classList.add("success")
+      if (type === "error") statusBox.classList.add("error")
+      statusBox.innerHTML = "<strong>" + title + "</strong><span>" + text + "</span>"
+    }
+
+    function trackClientEvent(eventName) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: eventName })
+      }).catch(() => {})
+    }
+
+    function saveSession(token, user) {
+      localStorage.setItem("token", token)
+      localStorage.setItem("user", JSON.stringify(user || {}))
+    }
+
+    function clearSession() {
+      localStorage.removeItem("token")
+      sessionStorage.removeItem("token")
+      localStorage.removeItem("user")
+    }
+
+    function getToken() {
+      return localStorage.getItem("token") || sessionStorage.getItem("token") || ""
+    }
+
+    function updateSessionState() {
+      const token = getToken()
+      const user = JSON.parse(localStorage.getItem("user") || "{}")
+      if (token) {
+        sessionState.textContent = user && user.email
+          ? `Logged in as ${user.email}. Your browser is ready to call protected routes.`
+          : "A login token is stored in this browser. The generator page can now call the protected route."
+      } else {
+        sessionState.textContent = "No active token stored yet."
+      }
+    }
+
+    function showLogin() {
+      loginTab.classList.add("active")
+      registerTab.classList.remove("active")
+      loginPanel.classList.add("active")
+      registerPanel.classList.remove("active")
+    }
+
+    function showRegister() {
+      registerTab.classList.add("active")
+      loginTab.classList.remove("active")
+      registerPanel.classList.add("active")
+      loginPanel.classList.remove("active")
+    }
+
+    function isTrustedUrl(rawUrl) {
+      try {
+        const parsed = new URL(rawUrl, window.location.origin)
+        if (parsed.origin === window.location.origin) return true
+        return TRUSTED_EXTERNAL_HOSTS.has(parsed.hostname)
+      } catch (_) {
+        return false
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest("a[target='_blank']")
+      if (!link) return
+      if (!isTrustedUrl(link.href)) {
+        event.preventDefault()
+        setStatus("Blocked link", "An untrusted external URL was blocked.", "error")
+      }
+    })
+
+    loginTab.addEventListener("click", showLogin)
+    registerTab.addEventListener("click", showRegister)
+
+    goHomeBtn.addEventListener("click", () => {
+      window.location.href = "/index.html"
+    })
+
+    logoutBtn.addEventListener("click", () => {
+      clearSession()
+      updateSessionState()
+      setStatus("Session cleared", "The saved browser token and user data were removed.", "success")
+    })
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault()
+
+      const email = document.getElementById("loginEmail").value.trim()
+      const password = document.getElementById("loginPassword").value
+
+      setStatus("Signing in", "Checking your credentials with the server.", "")
+
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setStatus("Login failed", data.error || "Could not sign in.", "error")
+          return
+        }
+
+        saveSession(data.token, data.user)
+        updateSessionState()
+        setStatus("Login successful", "Your session was saved. Redirecting to the generator.", "success")
+
+        setTimeout(() => {
+          window.location.href = "/index.html"
+        }, 900)
+      } catch (err) {
+        setStatus("Network error", err.message || "Could not reach the server.", "error")
+      }
+    })
+
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault()
+
+      const username = document.getElementById("registerUsername").value.trim()
+      const email = document.getElementById("registerEmail").value.trim()
+      const password = document.getElementById("registerPassword").value
+      const welderModel = document.getElementById("registerWelderModel").value
+      const experience = document.getElementById("registerExperience").value
+
+      setStatus("Creating account", "Submitting your registration to the server.", "")
+
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username,
+            email,
+            password,
+            welderModel,
+            experience
+          })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setStatus("Registration failed", data.error || "Could not create account.", "error")
+          return
+        }
+
+        saveSession(data.token, data.user)
+        updateSessionState()
+        setStatus("Account created", "Your session was saved. Redirecting to the generator.", "success")
+
+        setTimeout(() => {
+          window.location.href = "/index.html"
+        }, 900)
+      } catch (err) {
+        setStatus("Network error", err.message || "Could not reach the server.", "error")
+      }
+    })
+
+    updateSessionState()
+    trackClientEvent("page_view_login")
+  </script>
+</body>
+</html>

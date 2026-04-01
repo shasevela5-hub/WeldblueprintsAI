@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>WeldBlueprint AI - Dashboard</title>
+<style>
+body{
+font-family: Arial;
+background:#111;
+color:white;
+margin:0;
+padding:20px;
+}
+.container{
+max-width:1200px;
+margin:0 auto;
+}
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+}
+.header h1{
+color:#ff6a00;
+margin:0;
+}
+.user-info{
+display:flex;
+align-items:center;
+gap:20px;
+}
+.logout-btn{
+background:#333;
+color:white;
+border:none;
+padding:10px 20px;
+border-radius:5px;
+cursor:pointer;
+}
+.logout-btn:hover{
+background:#ff4444;
+}
+.nav{
+display:flex;
+gap:10px;
+margin-bottom:30px;
+}
+.nav a{
+color:white;
+text-decoration:none;
+padding:10px 20px;
+background:#1e1e1e;
+border-radius:5px;
+}
+.nav a:hover{
+background:#333;
+}
+.nav a.active{
+background:#ff6a00;
+color:black;
+}
+.dashboard{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+.card{
+background:#1e1e1e;
+padding:20px;
+border-radius:10px;
+}
+.card h2{
+color:#ff6a00;
+margin-top:0;
+}
+.project-list, .settings-list{
+margin-top:20px;
+}
+.project-item, .setting-item{
+background:#2a2a2a;
+padding:15px;
+border-radius:5px;
+margin-bottom:10px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+.project-info h3{
+margin:0 0 5px 0;
+color:#ff6a00;
+}
+.project-info p{
+margin:0;
+color:#888;
+font-size:14px;
+}
+.delete-btn{
+background:#ff4444;
+color:white;
+border:none;
+padding:5px 10px;
+border-radius:3px;
+cursor:pointer;
+font-size:12px;
+}
+.use-btn{
+background:#00aa00;
+color:white;
+border:none;
+padding:5px 10px;
+border-radius:3px;
+cursor:pointer;
+font-size:12px;
+margin-right:5px;
+}
+.empty-state{
+color:#888;
+text-align:center;
+padding:40px;
+}
+.stats-grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:15px;
+margin-bottom:20px;
+}
+.stat-card{
+background:#2a2a2a;
+padding:15px;
+text-align:center;
+border-radius:5px;
+}
+.stat-number{
+font-size:24px;
+color:#ff6a00;
+font-weight:bold;
+}
+.stat-label{
+color:#888;
+font-size:12px;
+margin-top:5px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<div class="header">
+<h1>🔧 My Dashboard</h1>
+<div class="user-info">
+<span id="welcomeMessage">Welcome!</span>
+<button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+</div>
+
+<div class="nav">
+<a href="/">🏠 Builder</a>
+<a href="/settings.html">⚡ Settings DB</a>
+<a href="/dashboard.html" class="active">📊 Dashboard</a>
+</div>
+
+<div class="stats-grid">
+<div class="stat-card">
+<div class="stat-number" id="projectCount">0</div>
+<div class="stat-label">Saved Projects</div>
+</div>
+<div class="stat-card">
+<div class="stat-number" id="settingCount">0</div>
+<div class="stat-label">Saved Settings</div>
+</div>
+<div class="stat-card">
+<div class="stat-number" id="favoriteCount">0</div>
+<div class="stat-label">Favorites</div>
+</div>
+</div>
+
+<div class="dashboard">
+<!-- Saved Projects -->
+<div class="card">
+<h2>📁 Saved Projects</h2>
+<div id="projectsList" class="project-list">
+<div class="empty-state">No saved projects yet</div>
+</div>
+</div>
+
+<!-- Saved Settings -->
+<div class="card">
+<h2>⚙️ Saved Settings</h2>
+<div id="settingsList" class="settings-list">
+<div class="empty-state">No saved settings yet</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+// Check if user is logged in
+const token = localStorage.getItem('token')
+const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+if (!token) {
+window.location.href = '/login.html'
+}
+
+document.getElementById('welcomeMessage').innerHTML = `Welcome, ${user.username || 'Welder'}!`
+
+// Load saved projects
+async function loadProjects() {
+try {
+const response = await fetch('http://localhost:3000/api/projects/saved', {
+headers: {
+'Authorization': `Bearer ${token}`
+}
+})
+const data = await response.json()
+const projectsList = document.getElementById('projectsList')
+document.getElementById('projectCount').innerHTML = data.projects.length
+
+if (data.projects.length === 0) {
+projectsList.innerHTML = '<div class="empty-state">No saved projects yet</div>'
+return
+}
+
+projectsList.innerHTML = ''
+data.projects.forEach(project => {
+const item = document.createElement('div')
+item.className = 'project-item'
+item.innerHTML = `
+<div class="project-info">
+<h3>${project.project}</h3>
+<p>${project.dimensions} | ${project.welder} | ${project.process}</p>
+<small>Saved: ${new Date(project.savedAt).toLocaleDateString()}</small>
+</div>
+<div>
+<button class="use-btn" onclick="useProject(${project.id})">Use</button>
+<button class="delete-btn" onclick="deleteProject(${project.id})">Delete</button>
+</div>
+`
+projectsList.appendChild(item)
+})
+} catch(err) {
+console.error('Error loading projects:', err)
+}
+}
+
+// Load saved settings
+async function loadSettings() {
+try {
+const response = await fetch('http://localhost:3000/api/settings/saved', {
+headers: {
+'Authorization': `Bearer ${token}`
+}
+})
+const data = await response.json()
+const settingsList = document.getElementById('settingsList')
+document.getElementById('settingCount').innerHTML = data.settings.length
+
+if (data.settings.length === 0) {
+settingsList.innerHTML = '<div class="empty-state">No saved settings yet</div>'
+return
+}
+
+settingsList.innerHTML = ''
+data.settings.forEach(setting => {
+const item = document.createElement('div')
+item.className = 'project-item'
+item.innerHTML = `
+<div class="project-info">
+<h3>${setting.welder} - ${setting.thickness}"</h3>
+<p>${setting.process} | ${setting.volts || ''} ${setting.wireSpeed || ''}</p>
+<small>Used: ${setting.usedCount} times</small>
+</div>
+<div>
+<button class="use-btn" onclick="useSetting(${setting.id})">Use</button>
+<button class="delete-btn" onclick="deleteSetting(${setting.id})">Delete</button>
+</div>
+`
+settingsList.appendChild(item)
+})
+} catch(err) {
+console.error('Error loading settings:', err)
+}
+}
+
+// Delete project
+async function deleteProject(id) {
+if (!confirm('Delete this project?')) return
+
+try {
+const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
+method: 'DELETE',
+headers: {
+'Authorization': `Bearer ${token}`
+}
+})
+if (response.ok) {
+loadProjects()
+}
+} catch(err) {
+console.error('Error deleting project:', err)
+}
+}
+
+// Use project (load into builder)
+function useProject(id) {
+window.location.href = '/'
+}
+
+// Delete setting
+async function deleteSetting(id) {
+if (!confirm('Delete this setting?')) return
+
+try {
+const response = await fetch(`http://localhost:3000/api/settings/${id}`, {
+method: 'DELETE',
+headers: {
+'Authorization': `Bearer ${token}`
+}
+})
+if (response.ok) {
+loadSettings()
+}
+} catch(err) {
+console.error('Error deleting setting:', err)
+}
+}
+
+// Use setting
+function useSetting(id) {
+// Mark as used
+fetch(`http://localhost:3000/api/settings/${id}/used`, {
+method: 'POST',
+headers: {
+'Authorization': `Bearer ${token}`
+}
+})
+window.location.href = '/settings.html'
+}
+
+// Logout
+function logout() {
+localStorage.removeItem('token')
+localStorage.removeItem('user')
+window.location.href = '/login.html'
+}
+
+// Load data
+loadProjects()
+loadSettings()
+</script>
+</body>
+</html>
