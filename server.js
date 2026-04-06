@@ -27,7 +27,7 @@ const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || ""
 const PAYPAL_BASE_URL = process.env.PAYPAL_BASE_URL || "https://api-m.sandbox.paypal.com"
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@weldblueprints.ai"
 const PRO_PRICE_USD = "19.99"
-const FREE_GENERATION_LIMIT = 3
+const FREE_GENERATION_LIMIT = Number(process.env.FREE_GENERATION_LIMIT || 25)
 
 app.use(cors({
   origin: APP_ORIGIN,
@@ -97,6 +97,24 @@ function rateLimit(keyPrefix, limit, windowMs) {
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase()
+}
+
+function sameUserId(a, b) {
+  if (a === null || a === undefined || b === null || b === undefined) return false
+  return String(a) === String(b)
+}
+
+function findUserById(id) {
+  return users.find(u => sameUserId(u.id, id))
+}
+
+function findUserFromToken(decoded) {
+  if (!decoded || typeof decoded !== "object") return null
+  const byId = findUserById(decoded.id)
+  if (byId) return byId
+  const email = normalizeEmail(decoded.email)
+  if (!email) return null
+  return users.find(u => normalizeEmail(u.email) === email) || null
 }
 
 function sanitizeText(value, max = 120) {
@@ -311,6 +329,7 @@ function authenticateToken(req, res, next) {
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(403).json({ error: "Invalid token" })
     req.user = decoded
+    req.userRecord = findUserFromToken(decoded)
     next()
   })
 }
@@ -322,7 +341,7 @@ function requireAdmin(req, res, next) {
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(403).json({ error: "Invalid token" })
-    const user = users.find(u => u.id === decoded.id)
+    const user = findUserFromToken(decoded)
     if (!user || !user.isAdmin) return res.status(403).json({ error: "Admin only" })
     req.user = decoded
     next()
@@ -778,6 +797,25 @@ function defaultProjectData(project, L, W, H) {
       ],
       steps: ["Build side frames.", "Connect with crossbars.", "Install stanchions and stops.", "Fit stake inserts.", "Test fit in bed.", "Prime and paint."]
     },
+    "Skid Loader Attachment Frame": {
+      material: "5/16 quick-attach plate, 3x3 tube crossmembers, and 3/8 pin ears",
+      parts: [
+        ["A", "Quick-attach top rail", 1, `${L}in`, "5/16 plate"],
+        ["B", "Quick-attach bottom rail", 1, `${L}in`, "5/16 plate"],
+        ["C", "Center support plate", 1, `${Math.max(12, Math.round(H * 0.8))}in`, "5/16 plate"],
+        ["D", "Rear cross tube", 2, `${Math.max(18, Math.round(L * 0.55))}in`, "3x3 sq tube"],
+        ["E", "Pin ear pair", 2, "8x4in", "3/8 plate"],
+        ["F", "Latch tab pair", 2, "6x3in", "3/8 plate"]
+      ],
+      steps: [
+        "Cut and bevel quick-attach plate profile.",
+        "Fit top and bottom rails to OEM quick-attach spacing.",
+        "Install center support and rear cross tubes square.",
+        "Weld pin ears and latch tabs to machine-side spec.",
+        "Check coupler fit on skid loader before finish welding.",
+        "Final weld, stress-relief cool-down, and corrosion coating."
+      ]
+    },
     "Fire Pit": {
       material: "3/16 plate and 1x1 angle rim",
       parts: [
@@ -1014,6 +1052,95 @@ function defaultProjectData(project, L, W, H) {
     }
   }
 
+  const keywordProfiles = [
+    {
+      match: ["stand"],
+      material: "2x2 sq tube, plate tabs, and gussets",
+      partName: ["Base rail", "Top rail", "Upright", "Brace", "Mount plate", "Foot plate"],
+      steps: [
+        "Build the base and top support frames.",
+        "Install uprights and maintain plumb alignment.",
+        "Add braces and all mounting tabs.",
+        "Check footprint stability and height.",
+        "Complete welds and blend exposed edges.",
+        "Prime and apply durable shop finish."
+      ]
+    },
+    {
+      match: ["rack"],
+      material: "2x2 sq tube, 1.5 round tube, and plate mounts",
+      partName: ["Side rail", "Cross rail", "Upright", "Stanchion", "Mount insert", "Stop tab"],
+      steps: [
+        "Build side rail assemblies to equal length.",
+        "Install cross rails and verify spacing.",
+        "Add uprights and stanchion features.",
+        "Fit mount inserts and retention tabs.",
+        "Test fit to host platform or wall.",
+        "Final weld cleanup and corrosion protection."
+      ]
+    },
+    {
+      match: ["bench", "table", "desk"],
+      material: "2x2 sq tube, 1x1 braces, and top tabs",
+      partName: ["Long rail", "Short rail", "Leg", "Cross brace", "Mount tab", "Level foot"],
+      steps: [
+        "Assemble top frame and verify square.",
+        "Install leg set and lower stretcher.",
+        "Add cross braces for torsional rigidity.",
+        "Weld top tabs and hardware points.",
+        "Dress visible welds and verify level.",
+        "Apply finish and mount top surface."
+      ]
+    },
+    {
+      match: ["trailer", "flatbed", "hitch", "carrier"],
+      material: "3x2 and 2x2 tube with plate mounts",
+      partName: ["Main rail", "Crossmember", "Support upright", "Side rail", "Mount plate", "Gusset"],
+      steps: [
+        "Lay out and tack the base frame.",
+        "Install crossmembers at equal intervals.",
+        "Add support uprights and side rails.",
+        "Fit all plate mounts and coupler points.",
+        "Gusset high-load nodes before final welding.",
+        "Confirm tracking dimensions and coat steel."
+      ]
+    },
+    {
+      match: ["gate", "panel", "screen", "sign", "wall"],
+      material: "flat bar, light tube, and sheet plate",
+      partName: ["Outer rail", "Cross rail", "Upright", "Detail member", "Mount tab", "Trim cap"],
+      steps: [
+        "Cut and square all perimeter members.",
+        "Tack outer frame on a flat table.",
+        "Install interior members with equal spacing.",
+        "Add decorative or mounting features.",
+        "Verify flatness and final dimensions.",
+        "Finish grind and paint/patina."
+      ]
+    }
+  ]
+
+  const lowerName = String(project || "").toLowerCase()
+  const profile = keywordProfiles.find(entry => entry.match.some(word => lowerName.includes(word)))
+  if (profile) {
+    return {
+      material: profile.material,
+      parts: [
+        ["A", profile.partName[0], 2, `${L}in`, "2x2 sq tube"],
+        ["B", profile.partName[1], 2, `${W}in`, "2x2 sq tube"],
+        ["C", profile.partName[2], 4, `${H}in`, "2x2 sq tube"],
+        ["D", profile.partName[3], 2, `${Math.max(12, Math.round(L * 0.35))}in`, "1x1 sq tube"],
+        ["E", profile.partName[4], 4, "4x3in", "3/16 plate"],
+        ["F", profile.partName[5], 4, "4in", "3/16 plate"]
+      ],
+      steps: profile.steps
+    }
+  }
+
+  const style = getProjectStyle(project)
+  const styleTemplate = buildStyleTemplate(project, style, L, W, H)
+  if (styleTemplate) return styleTemplate
+
   return templates[category] || {
     material: "2x2 sq tube and 3/16 plate",
     parts: [
@@ -1035,6 +1162,548 @@ function defaultProjectData(project, L, W, H) {
   }
 }
 
+function buildStyleTemplate(project, style, L, W, H) {
+  const cleanName = sanitizeText(project, 120)
+  const shortName = cleanName.replace(/\b(frame|stand|rack|base|panel|piece|attachment)\b/gi, "").replace(/\s+/g, " ").trim() || cleanName
+
+  const byStyle = {
+    cart: {
+      material: "1x1 to 2x2 tube, plate tabs, and caster mounts",
+      parts: [
+        ["A", `${shortName} top rail`, 2, `${L}in`, "1x1 or 2x2 tube"],
+        ["B", `${shortName} lower rail`, 2, `${L}in`, "1x1 or 2x2 tube"],
+        ["C", `${shortName} side rail`, 4, `${W}in`, "1x1 or 2x2 tube"],
+        ["D", "Leg/upright", 4, `${H}in`, "1x1 or 2x2 tube"],
+        ["E", "Accessory mount", 2, `${Math.max(10, Math.round(H * 0.4))}in`, "flat/tube"],
+        ["F", "Caster plate", 4, "4x4in", "3/16 plate"]
+      ],
+      steps: [
+        "Cut top, lower, and side rails.",
+        "Build top frame and verify square.",
+        "Install legs and lower frame.",
+        "Add accessory mounts and gussets.",
+        "Weld caster plates and check level.",
+        "Final weld cleanup and finish."
+      ]
+    },
+    pit: {
+      material: "3/16 plate body with angle/flat reinforcement",
+      parts: [
+        ["A", `${shortName} long panel`, 2, `${L}x${H}in`, "3/16 plate"],
+        ["B", `${shortName} short panel`, 2, `${W}x${H}in`, "3/16 plate"],
+        ["C", "Bottom plate", 1, `${L}x${W}in`, "3/16 plate"],
+        ["D", "Rim/trim", 4, `${Math.max(W, Math.round(L * 0.5))}in`, "1x1 angle/flat"],
+        ["E", "Grate/support", 4, `${Math.max(10, Math.round(W * 0.6))}in`, "round rod/flat"],
+        ["F", "Leg/mount tab", 4, "6in", "2x2 tube or plate"]
+      ],
+      steps: [
+        "Cut all plate panels and bottom.",
+        "Tack shell and verify square.",
+        "Weld seams in staggered sequence.",
+        "Install rim and grate supports.",
+        "Add legs/tabs and clean edges.",
+        "Apply high-temp or outdoor finish."
+      ]
+    },
+    frame: {
+      material: "2x2 tube with braces and plate mounts",
+      parts: [
+        ["A", `${shortName} main rail`, 2, `${L}in`, "2x2 sq tube"],
+        ["B", `${shortName} cross rail`, 2, `${W}in`, "2x2 sq tube"],
+        ["C", `${shortName} upright`, 4, `${H}in`, "2x2 sq tube"],
+        ["D", "Brace", 2, `${Math.max(12, Math.round(L * 0.35))}in`, "1x1 sq tube"],
+        ["E", "Mount plate", 4, "4x4in", "3/16 plate"],
+        ["F", "Gusset", 4, "6in", "3/16 plate"]
+      ],
+      steps: [
+        "Cut and prep all frame members.",
+        "Tack frame and verify diagonals.",
+        "Install uprights and braces.",
+        "Fit mount plates and gussets.",
+        "Complete welds with distortion control.",
+        "Clean, inspect, and finish."
+      ]
+    },
+    skid: {
+      material: "5/16 quick-attach plate, 3x3 tube, 3/8 plate ears",
+      parts: [
+        ["A", `${shortName} top coupler rail`, 1, `${L}in`, "5/16 plate"],
+        ["B", `${shortName} bottom coupler rail`, 1, `${L}in`, "5/16 plate"],
+        ["C", `${shortName} center support`, 1, `${Math.max(12, Math.round(H * 0.8))}in`, "5/16 plate"],
+        ["D", `${shortName} rear cross tube`, 2, `${Math.max(18, Math.round(L * 0.55))}in`, "3x3 sq tube"],
+        ["E", "Pin ear pair", 2, "8x4in", "3/8 plate"],
+        ["F", "Latch tab pair", 2, "6x3in", "3/8 plate"]
+      ],
+      steps: [
+        "Cut quick-attach profile to coupler spec.",
+        "Fit top and bottom rails to OEM centerlines.",
+        "Install center support and rear cross tubes.",
+        "Weld pin ears and latch tabs to final spacing.",
+        "Test fit on machine before finish welding.",
+        "Final weld and anti-corrosion finish."
+      ]
+    },
+    hoist: {
+      material: "3x3 to 4x4 structural tube and 3/8 gusset plate",
+      parts: [
+        ["A", `${shortName} base beam`, 2, `${L}in`, "3x3 sq tube"],
+        ["B", `${shortName} base cross`, 1, `${W}in`, "3x3 sq tube"],
+        ["C", `${shortName} mast`, 1, `${H}in`, "4x4 sq tube"],
+        ["D", `${shortName} boom arm`, 1, `${Math.max(20, Math.round(L * 0.6))}in`, "3x3 sq tube"],
+        ["E", "Gusset plate", 4, "8x8in", "3/8 plate"],
+        ["F", "Caster/foot mount", 4, "6in", "3x3 sq tube"]
+      ],
+      steps: [
+        "Build base and verify symmetry.",
+        "Install mast plumb with gussets.",
+        "Fabricate and fit boom arm.",
+        "Install pivot and hook points.",
+        "Fit feet/casters and check stability.",
+        "Load test and finalize finish."
+      ]
+    },
+    cage: {
+      material: "1.75 DOM tube and 3/16 gusset plate",
+      parts: [
+        ["A", `${shortName} main hoop`, 1, `${H}x${W}in`, "1.75 DOM"],
+        ["B", `${shortName} front hoop`, 1, `${Math.round(H * 0.9)}x${Math.round(W * 0.75)}in`, "1.75 DOM"],
+        ["C", "Roof tube", 2, `${Math.max(20, Math.round(L * 0.5))}in`, "1.75 DOM"],
+        ["D", "Side tube", 2, `${Math.max(20, Math.round(L * 0.5))}in`, "1.75 DOM"],
+        ["E", "Node gusset", 8, "4in", "3/16 plate"],
+        ["F", "Mount plate", 4, "6x4in", "3/16 plate"]
+      ],
+      steps: [
+        "Bend and notch hoops and tubes.",
+        "Tack on fixture/vehicle and verify clearances.",
+        "Install roof and side tubes.",
+        "Add gussets at high-load nodes.",
+        "Weld mount plates to frame hard points.",
+        "Final weld pass and protective coating."
+      ]
+    },
+    murphy: {
+      material: "2x3 and 2x2 tube with 3/8 pivot plates",
+      parts: [
+        ["A", "Wall frame upright", 4, `${H}in`, "2x3 rect tube"],
+        ["B", "Wall frame rail", 4, `${W}in`, "2x3 rect tube"],
+        ["C", "Bed side rail", 2, `${L}in`, "2x2 sq tube"],
+        ["D", "Bed cross rail", 3, `${W}in`, "2x2 sq tube"],
+        ["E", "Pivot arm", 2, "24in", "2x2 sq tube"],
+        ["F", "Pivot plate", 4, "6x4in", "3/8 plate"]
+      ],
+      steps: [
+        "Build wall anchor frame square.",
+        "Build bed platform frame.",
+        "Install pivot arms and plates.",
+        "Anchor wall frame to structural studs.",
+        "Test fold action and clearances.",
+        "Install final hardware and finish."
+      ]
+    },
+    lift: {
+      material: "2x3 and 2x2 tube with 1in pivot pins",
+      parts: [
+        ["A", `${shortName} top frame`, 1, `${L}x${W}in`, "2x3/2x2 tube"],
+        ["B", `${shortName} lower frame`, 1, `${L}x${W}in`, "2x3/2x2 tube"],
+        ["C", "Scissor arm", 4, `${Math.max(18, Math.round(L * 0.6))}in`, "2x2 sq tube"],
+        ["D", "Pivot pin", 4, `${Math.max(8, Math.round(W * 0.3))}in`, "1in round bar"],
+        ["E", "Deck plate", 1, `${L}x${W}in`, "3/16 plate"],
+        ["F", "Cylinder mount", 2, "6x4in", "3/8 plate"]
+      ],
+      steps: [
+        "Build top and lower frames.",
+        "Drill scissor arms and fit pins.",
+        "Install center and end pivots.",
+        "Fit actuator/cylinder mounts.",
+        "Install deck and wheel/chock features.",
+        "Cycle test before service use."
+      ]
+    },
+    flatbed: {
+      material: "3x2 main rails, 2x2 crossmembers, and 3/16 plate",
+      parts: [
+        ["A", `${shortName} main rail`, 2, `${L}in`, "3x2 rect tube"],
+        ["B", `${shortName} crossmember`, 6, `${W}in`, "2x2 sq tube"],
+        ["C", "Perimeter rail", 2, `${L}in`, "2x2 sq tube"],
+        ["D", "Rack upright", 2, `${Math.max(20, Math.round(H * 0.8))}in`, "2x2 sq tube"],
+        ["E", "Mount plate", 6, "6x4in", "3/16 plate"],
+        ["F", "Deck plate", 1, `${L}x${W}in`, "3/16 plate"]
+      ],
+      steps: [
+        "Layout main rails and crossmembers.",
+        "Square and tack frame.",
+        "Install perimeter/rack members.",
+        "Fit mount plates and stake features.",
+        "Install deck and finish welds.",
+        "Check twist and coat steel."
+      ]
+    },
+    trailer: {
+      material: "3x2 and 2x2 structural tube with plate mounts",
+      parts: [
+        ["A", `${shortName} main rail`, 2, `${L}in`, "3x2 rect tube"],
+        ["B", `${shortName} crossmember`, 4, `${W}in`, "2x2 sq tube"],
+        ["C", "Support upright", 2, `${Math.max(18, Math.round(H * 0.5))}in`, "2x2 sq tube"],
+        ["D", "Tongue/side member", 2, `${Math.max(36, Math.round(L * 0.5))}in`, "3x2 rect tube"],
+        ["E", "Mount plate", 4, "6x4in", "3/16 plate"],
+        ["F", "Gusset", 6, "6in", "3/16 plate"]
+      ],
+      steps: [
+        "Build and square base frame.",
+        "Install crossmembers and side/tongue members.",
+        "Fit uprights and load supports.",
+        "Install all mount and gusset plates.",
+        "Check coupler/axle interface dimensions.",
+        "Final weld and protective finish."
+      ]
+    },
+    rack: {
+      material: "2x2 sq tube, round stanchions, and mount inserts",
+      parts: [
+        ["A", `${shortName} side rail`, 2, `${L}in`, "2x2 sq tube"],
+        ["B", `${shortName} cross rail`, 3, `${W}in`, "2x2 sq tube"],
+        ["C", "Upright", 4, `${H}in`, "2x2 sq tube"],
+        ["D", "Stanchion", 4, "36in", "1.5 round tube"],
+        ["E", "Mount insert", 4, "6in", "1.5 sq tube"],
+        ["F", "Stop tab", 8, "3in", "3/16 plate"]
+      ],
+      steps: [
+        "Build side assemblies and keep parallel.",
+        "Install cross rails and uprights.",
+        "Fit stanchions and stop tabs.",
+        "Install inserts or mount feet.",
+        "Test fit to host platform.",
+        "Finish weld and coat."
+      ]
+    },
+    railing: {
+      material: "1.5 sq tube rails, 2x2 posts, and baluster bar",
+      parts: [
+        ["A", "Top rail", 1, `${L}in`, "1.5x1.5 sq tube"],
+        ["B", "Bottom rail", 1, `${L}in`, "1.5x1.5 sq tube"],
+        ["C", "Post", 3, `${H}in`, "2x2 sq tube"],
+        ["D", "Baluster", 8, `${Math.max(18, H - 6)}in`, "1/2 sq bar"],
+        ["E", "Base plate", 3, "4x4in", "3/16 plate"],
+        ["F", "Post cap", 3, "2x2in", "3/16 plate"]
+      ],
+      steps: [
+        "Cut rails, posts, and balusters.",
+        "Weld base plates to posts.",
+        "Set post spacing and tack rails.",
+        "Install balusters to code spacing.",
+        "Check level and plumb.",
+        "Final weld and finish."
+      ]
+    },
+    greenhouse: {
+      material: "2x2 base tube, 1x1 uprights, and bent arches",
+      parts: [
+        ["A", "Base rail", 4, `${L}in`, "2x2 sq tube"],
+        ["B", "Wall upright", 8, `${Math.round(H * 0.6)}in`, "1x1 sq tube"],
+        ["C", "Roof arch", 6, `${W}in`, "1in round tube"],
+        ["D", "Hip rafter", 2, `${L}in`, "1x1 sq tube"],
+        ["E", "Glazing bar", 12, `${Math.max(10, Math.round(L / 6))}in`, "1in flat bar"],
+        ["F", "Door frame", 1, `${Math.round(W / 3)}x${Math.round(H * 0.6)}in`, "1x1 sq tube"]
+      ],
+      steps: [
+        "Assemble base frame and anchor points.",
+        "Install uprights and check plumb.",
+        "Fit arches and ridge members.",
+        "Install glazing bars and door frame.",
+        "Check alignment and rack.",
+        "Finish prep for panel install."
+      ]
+    },
+    mezzanine: {
+      material: "6x4 beams, 4x2 joists, 4x4 columns, and plate brackets",
+      parts: [
+        ["A", "Main beam", 3, `${L}in`, "6x4 rect tube"],
+        ["B", "Floor joist", 6, `${W}in`, "4x2 rect tube"],
+        ["C", "Column", 4, `${H}in`, "4x4 sq tube"],
+        ["D", "Beam bracket", 6, "8x6in", "3/8 plate"],
+        ["E", "Base plate", 4, "12x12in", "1/2 plate"],
+        ["F", "Safety post", 8, "42in", "2x2 sq tube"]
+      ],
+      steps: [
+        "Build column/base assemblies.",
+        "Stand and anchor columns.",
+        "Install main beams and brackets.",
+        "Install joists and verify level.",
+        "Install safety posts/rails.",
+        "Final weld and finish."
+      ]
+    },
+    carport: {
+      material: "4x4 posts, 4x2 beams, 2x2 purlins, and base plates",
+      parts: [
+        ["A", "Post", 4, `${H}in`, "4x4 sq tube"],
+        ["B", "Beam", 2, `${L}in`, "4x2 rect tube"],
+        ["C", "Purlin", 6, `${W}in`, "2x2 sq tube"],
+        ["D", "Knee brace", 4, "24in", "2x2 sq tube"],
+        ["E", "Base plate", 4, "10x10in", "3/8 plate"],
+        ["F", "Ridge member", 1, `${L}in`, "2x2 sq tube"]
+      ],
+      steps: [
+        "Prep posts and base plates.",
+        "Set posts plumb and brace.",
+        "Install beams and purlins.",
+        "Add knee braces and ridge member.",
+        "Verify bay dimensions and square.",
+        "Final weld and protective coating."
+      ]
+    },
+    pergola: {
+      material: "4x4 posts, 4x2 beams, and 2x2 rafters",
+      parts: [
+        ["A", "Post", 4, `${H}in`, "4x4 sq tube"],
+        ["B", "Beam", 2, `${L}in`, "4x2 rect tube"],
+        ["C", "Rafter", 6, `${W}in`, "2x2 sq tube"],
+        ["D", "Base plate", 4, "8x8in", "3/8 plate"],
+        ["E", "Knee brace", 4, "24in", "2x2 sq tube"],
+        ["F", "Tie plate", 12, "3in", "3/16 plate"]
+      ],
+      steps: [
+        "Prep posts and base anchors.",
+        "Set post layout and plumb.",
+        "Install beams and rafters.",
+        "Add braces and tie plates.",
+        "Check spacing and level.",
+        "Finish and weatherproof."
+      ]
+    },
+    planter: {
+      material: "plate body with cap rails and drain features",
+      parts: [
+        ["A", "Long wall", 2, `${L}x${H}in`, "3/16 plate"],
+        ["B", "Short wall", 2, `${W}x${H}in`, "3/16 plate"],
+        ["C", "Corner post", 4, `${H + 2}in`, "1.5x1.5 sq tube"],
+        ["D", "Cap rail long", 2, `${L}in`, "1x2 flat bar"],
+        ["E", "Cap rail short", 2, `${W}in`, "1x2 flat bar"],
+        ["F", "Drain strip", 2, `${L}in`, "1x1 angle"]
+      ],
+      steps: [
+        "Cut and prep all wall panels.",
+        "Tack panels to corner posts.",
+        "Weld seams and add cap rails.",
+        "Install drain strips/holes.",
+        "Deburr all exposed edges.",
+        "Apply desired finish."
+      ]
+    },
+    table: {
+      material: "2x2 and 1x1 tube with plate or tab top support",
+      parts: [
+        ["A", `${shortName} long rail`, 2, `${L}in`, "2x2 sq tube"],
+        ["B", `${shortName} short rail`, 2, `${W}in`, "2x2 sq tube"],
+        ["C", `${shortName} leg`, 4, `${H}in`, "2x2 sq tube"],
+        ["D", "Cross brace", 2, `${Math.max(12, Math.round(L * 0.35))}in`, "1x1 sq tube"],
+        ["E", "Top support tab", 4, "3in", "3/16 plate"],
+        ["F", "Foot/leveler", 4, "1in", "threaded/rubber"]
+      ],
+      steps: [
+        "Build top frame square.",
+        "Install legs and lower braces.",
+        "Add cross bracing and tabs.",
+        "Verify level and diagonal.",
+        "Dress welds as required.",
+        "Finish coat and assemble top."
+      ]
+    },
+    bookshelf: {
+      material: "pipe/tube uprights with shelf supports",
+      parts: [
+        ["A", "Upright", 4, `${H}in`, "1in pipe or 1x1 tube"],
+        ["B", "Shelf support long", 5, `${L}in`, "1x1 tube"],
+        ["C", "Shelf support short", 10, `${W}in`, "1x1 tube"],
+        ["D", "Mount bracket", 4, "6in", "3/16 plate"],
+        ["E", "Shelf tab", 10, "3in", "3/16 plate"],
+        ["F", "Stiffener", 4, `${Math.max(8, Math.round(W * 0.5))}in`, "1x1 tube"]
+      ],
+      steps: [
+        "Build side upright assemblies.",
+        "Install shelf supports at layout heights.",
+        "Add wall/floor mount brackets.",
+        "Install shelf tabs/stiffeners.",
+        "Check plumb and level.",
+        "Finish and install shelf boards."
+      ]
+    },
+    winerack: {
+      material: "1x1 tube frame with 1/2 rod cradles",
+      parts: [
+        ["A", "Upright", 2, `${H}in`, "1x1 sq tube"],
+        ["B", "Horizontal rail", 6, `${L}in`, "1x1 sq tube"],
+        ["C", "Bottle cradle rod", 12, `${W}in`, "1/2 round rod"],
+        ["D", "Wall tab", 4, "4in", "3/16 plate"],
+        ["E", "Top shelf", 1, `${L}x6in`, "3/16 plate"],
+        ["F", "Label rail", 6, `${Math.max(4, Math.round(L / 6))}in`, "1x1/8 flat bar"]
+      ],
+      steps: [
+        "Build perimeter frame.",
+        "Install horizontal rails.",
+        "Fit bottle cradle rods in pairs.",
+        "Install wall tabs and top shelf.",
+        "Check spacing for bottle clearance.",
+        "Finish and mount."
+      ]
+    },
+    wallshelf: {
+      material: "plate brackets and hidden support rods",
+      parts: [
+        ["A", "Bracket arm", 3, "12in", "3/8 plate"],
+        ["B", "Wall plate", 3, "6x4in", "3/16 plate"],
+        ["C", "Stiffener", 3, "8in", "3/16 plate"],
+        ["D", "Shelf rod", 6, `${Math.max(8, Math.round(L / 3))}in`, "round bar"],
+        ["E", "End cap", 6, "2in", "3/16 plate"],
+        ["F", "Set screw tab", 3, "1in", "1/8 flat bar"]
+      ],
+      steps: [
+        "Fabricate bracket arms and wall plates.",
+        "Install stiffeners and support rods.",
+        "Mount wall plates to studs.",
+        "Fit shelf body over rods.",
+        "Set and lock with screws.",
+        "Touch up finish."
+      ]
+    },
+    sculpture: {
+      material: "base plate, rod armature, and formed sheet",
+      parts: [
+        ["A", "Base plate", 1, "12x12in", "1/2 plate"],
+        ["B", "Armature rod", 4, `${H}in`, "1/2 round rod"],
+        ["C", "Body form", 1, `${Math.max(10, Math.round(L * 0.3))}x${Math.max(10, Math.round(H * 0.3))}in`, "14ga sheet"],
+        ["D", "Detail element", 6, "varies", "scrap steel"],
+        ["E", "Texture piece", 8, "varies", "chain/bolt/nut"],
+        ["F", "Mount stud", 4, "2in", "3/8 threaded rod"]
+      ],
+      steps: [
+        "Build armature on base plate.",
+        "Form and tack body shell.",
+        "Install detail and texture components.",
+        "Balance sculpture and check stance.",
+        "Final weld and blend edges.",
+        "Apply patina or clear coat."
+      ]
+    },
+    gate: {
+      material: "flat bar frame with pickets/panels and hardware",
+      parts: [
+        ["A", `${shortName} outer rail`, 2, `${L}in`, "1x2 flat bar or tube"],
+        ["B", `${shortName} outer stile`, 2, `${H}in`, "1x2 flat bar or tube"],
+        ["C", "Inner member", 6, `${Math.max(12, Math.round(H * 0.7))}in`, "1/2 sq bar"],
+        ["D", "Diagonal/brace", 1, `${Math.max(L, H)}in`, "flat bar"],
+        ["E", "Hinge tab", 2, "5in", "hinge/tab plate"],
+        ["F", "Latch tab", 1, "std", "latch hardware"]
+      ],
+      steps: [
+        "Build perimeter frame square.",
+        "Install interior members and braces.",
+        "Fit hinge and latch tabs.",
+        "Check swing/fitment clearances.",
+        "Complete welds and grind as needed.",
+        "Apply finish coat."
+      ]
+    },
+    furniture: {
+      material: "1x1 to 2x2 tube with mount tabs and braces",
+      parts: [
+        ["A", `${shortName} long rail`, 2, `${L}in`, "1x1 or 2x2 tube"],
+        ["B", `${shortName} short rail`, 2, `${W}in`, "1x1 or 2x2 tube"],
+        ["C", "Leg/support", 4, `${H}in`, "1x1 or 2x2 tube"],
+        ["D", "Cross brace", 2, `${Math.max(12, Math.round(L * 0.35))}in`, "1x1 tube"],
+        ["E", "Mount tab", 4, "3in", "3/16 plate"],
+        ["F", "Foot/leveler", 4, "1in", "rubber/threaded"]
+      ],
+      steps: [
+        "Cut rails and supports.",
+        "Build frame square and level.",
+        "Install legs and braces.",
+        "Add tabs and mount points.",
+        "Dress visible welds.",
+        "Finish and final assembly."
+      ]
+    },
+    struct: {
+      material: "structural tube and plate gusset/brackets",
+      parts: [
+        ["A", `${shortName} main member`, 2, `${L}in`, "4x2 or 6x4 tube"],
+        ["B", `${shortName} cross member`, 4, `${W}in`, "2x2 or 4x2 tube"],
+        ["C", "Column/upright", 4, `${H}in`, "2x2 to 4x4 tube"],
+        ["D", "Brace", 4, `${Math.max(16, Math.round(H * 0.35))}in`, "2x2 tube"],
+        ["E", "Base/mount plate", 4, "8x8in", "3/8 plate"],
+        ["F", "Gusset", 8, "6in", "3/16 plate"]
+      ],
+      steps: [
+        "Lay out primary members.",
+        "Tack and verify structural square.",
+        "Install uprights and braces.",
+        "Fit plates and gussets.",
+        "Check plumb/level and diagonals.",
+        "Complete weld schedule and coat."
+      ]
+    },
+    outdoor: {
+      material: "plate and tube sections for exterior use",
+      parts: [
+        ["A", `${shortName} side member`, 2, `${L}in`, "tube/plate"],
+        ["B", `${shortName} end member`, 2, `${W}in`, "tube/plate"],
+        ["C", "Support/upright", 4, `${H}in`, "tube"],
+        ["D", "Panel/insert", 2, `${Math.max(12, Math.round(L * 0.6))}in`, "plate/sheet"],
+        ["E", "Bracket/tab", 4, "4in", "3/16 plate"],
+        ["F", "Trim/rim", 4, `${Math.max(8, Math.round(W * 0.5))}in`, "flat/angle"]
+      ],
+      steps: [
+        "Cut members and set layout.",
+        "Build and square frame.",
+        "Install supports and inserts.",
+        "Add tabs/trim features.",
+        "Deburr and clean welds.",
+        "Apply outdoor-rated finish."
+      ]
+    },
+    shelf: {
+      material: "1x1 to 2x2 tube with shelf supports",
+      parts: [
+        ["A", `${shortName} long rail`, 2, `${L}in`, "2x2 sq tube"],
+        ["B", `${shortName} short rail`, 3, `${W}in`, "2x2 sq tube"],
+        ["C", "Leg/upright", 4, `${H}in`, "2x2 sq tube"],
+        ["D", "Shelf rail", 2, `${L}in`, "1x1 sq tube"],
+        ["E", "Mount/top plate", 1, `${L}x${W}in`, "3/16 plate"],
+        ["F", "Foot/caster plate", 4, "4x4in", "3/16 plate"]
+      ],
+      steps: [
+        "Cut and prep all members.",
+        "Tack top frame square.",
+        "Install legs/uprights.",
+        "Add shelf rails and supports.",
+        "Fit top plate or mounting tabs.",
+        "Final weld and finish."
+      ]
+    },
+    decor: {
+      material: "14ga to 3/16 plate and light support members",
+      parts: [
+        ["A", `${shortName} base/backer`, 1, `${Math.max(12, Math.round(W * 0.8))}x${Math.max(12, Math.round(H * 0.8))}in`, "14ga/3/16 plate"],
+        ["B", "Primary form", 1, `${Math.max(12, Math.round(L * 0.8))}in`, "14ga/3/16 plate"],
+        ["C", "Support element", 2, `${Math.max(8, Math.round(H * 0.6))}in`, "rod/tube"],
+        ["D", "Detail element", 4, "varies", "plate/scrap steel"],
+        ["E", "Mount tab", 2, "3in", "3/16 plate"],
+        ["F", "Trim/detail strip", 4, "varies", "flat bar"]
+      ],
+      steps: [
+        "Cut primary decorative pieces.",
+        "Tack to backer/support structure.",
+        "Add details and layering.",
+        "Check visual alignment.",
+        "Final weld and edge cleanup.",
+        "Apply patina/paint/clear."
+      ]
+    }
+  }
+
+  return byStyle[style] || null
+}
+
 function getWeldSettings(thickness, process) {
   const byThickness = {
     "1/8": { volts: "18.5", wfs: "300 ipm", amps: "~130A", preheat: "None" },
@@ -1050,15 +1719,27 @@ function getWeldSettings(thickness, process) {
 function getProjectStyle(project) {
   const category = blueprintGallery[project] && blueprintGallery[project].category
   if (project === "Engine Hoist") return "hoist"
+  if (project === "Engine Stand") return "hoist"
+  if (project === "Gantry Crane") return "hoist"
   if (project === "ATV Roll Cage") return "cage"
   if (project === "Stair Railing") return "railing"
+  if (project === "Pipe Handrail") return "railing"
   if (project === "Greenhouse Frame") return "greenhouse"
   if (project === "Mezzanine Frame") return "mezzanine"
+  if (project === "Shelter Truss") return "struct"
+  if (project === "Shop Door Frame") return "gate"
   if (project === "Carport Frame") return "carport"
   if (project === "Pergola Frame") return "pergola"
   if (project === "Raised Garden Bed") return "planter"
+  if (project === "Planter Stand") return "planter"
   if (project === "Truck Flatbed") return "flatbed"
+  if (project === "Skid Loader Attachment Frame") return "skid"
+  if (project === "Dump Trailer") return "trailer"
+  if (project === "Smoker Trailer") return "trailer"
+  if (project === "Trailer Spare Tire Mount") return "trailer"
+  if (project === "Receiver Hitch Carrier") return "trailer"
   if (project === "Headache Rack" || project === "Truck Toolbox Rack" || project === "Pipe Rack") return "rack"
+  if (project === "Ladder Rack" || project === "Material Rack" || project === "Firewood Rack") return "rack"
   if (project === "Industrial Bookshelf") return "bookshelf"
   if (project === "Wine Rack") return "winerack"
   if (project === "Welded Sculpture") return "sculpture"
@@ -1066,7 +1747,13 @@ function getProjectStyle(project) {
   if (project === "Floating Wall Shelves") return "wallshelf"
   if (project === "Motorcycle Lift") return "lift"
   if (project === "Welding Cart") return "cart"
-  if (project === "Welding Table" || project === "Shop Workbench") return "table"
+  if (project === "Welding Table" || project === "Shop Workbench" || project === "Coffee Table" || project === "Dining Table Base" || project === "Patio Table Base" || project === "Console Desk Frame" || project === "Entry Console Table" || project === "TV Stand Frame" || project === "Kitchen Island Base") return "table"
+  if (project === "Band Saw Stand" || project === "Angle Grinder Stand" || project === "Drill Press Stand" || project === "Tube Bender Stand" || project === "Chop Saw Stand") return "shelf"
+  if (project === "Tool Cabinet") return "shelf"
+  if (project === "Fence Panel" || project === "Trellis Panel" || project === "Decorative Screen Panel" || project === "Steel Sign" || project === "Custom Address Sign") return "gate"
+  if (project === "Mailbox Post Frame" || project === "Arbor Arch") return "outdoor"
+  if (project === "Monogram Wall Piece" || project === "Metal Clock Frame" || project === "Decorative Candle Sconce" || project === "Hanging Pot Rack" || project === "Candle Holder" || project === "Metal Wall Art" || project === "Geometric Planter" || project === "Steel Bookends") return "decor"
+  if (project === "Bed Frame" || project === "Bar Stool" || project === "Entry Bench Frame") return "furniture"
   if (category === "Truck & Trailers") return "trailer"
   if (project === "Fire Pit" || project === "BBQ Grill") return "pit"
   if (project === "Garden Gate" || project === "Steel Sign") return "gate"
@@ -1083,185 +1770,155 @@ function drawBlueprint(doc, payload) {
   const { L, W, H } = dimensions
   const projectData = defaultProjectData(project, L, W, H)
   const ws = getWeldSettings(thickness, process)
-
-  const pageWidth = 1190
-  const pageHeight = 842
-  const colors = { paper: "#EFE2C8", grid: "#DCE7E0", ink: "#556A78", inkBold: "#3B4F5B", note: "#627684" }
-
-  doc.rect(0, 0, pageWidth, pageHeight).fill(colors.paper)
-  for (let x = 0; x <= pageWidth; x += 36) doc.moveTo(x, 0).lineTo(x, pageHeight).strokeColor(colors.grid).lineWidth(0.5).stroke()
-  for (let y = 0; y <= pageHeight; y += 36) doc.moveTo(0, y).lineTo(pageWidth, y).strokeColor(colors.grid).lineWidth(0.5).stroke()
-
-  doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(52).text(project.toUpperCase(), 0, 22, { width: pageWidth, align: "center" })
-  doc.fillColor(colors.ink).font("Helvetica-BoldOblique").fontSize(20).text("BROUGHT TO YOU BY WELDBLUEPRINTS AI", 0, 82, { width: pageWidth, align: "center" })
-
-  function iso(x, y, z, sx, sy, sz, ox, oy) {
-    return { x: ox + (x - y) * sx, y: oy + (x + y) * sy - z * sz }
-  }
-  function line(p1, p2, w = 1.3, c = colors.inkBold) {
-    doc.moveTo(p1.x, p1.y).lineTo(p2.x, p2.y).strokeColor(c).lineWidth(w).stroke()
-  }
-  function dim(p1, p2, label, dx = 0, dy = 0) {
-    const a = { x: p1.x + dx, y: p1.y + dy }
-    const b = { x: p2.x + dx, y: p2.y + dy }
-    line(a, b, 0.8, colors.ink)
-    const vx = b.x - a.x
-    const vy = b.y - a.y
-    const len = Math.max(1, Math.hypot(vx, vy))
-    const nx = vx / len
-    const ny = vy / len
-    const ax = -ny
-    const ay = nx
-    const s = 5
-    doc.polygon([a.x, a.y], [a.x + nx * 8 + ax * s * 0.6, a.y + ny * 8 + ay * s * 0.6], [a.x + nx * 8 - ax * s * 0.6, a.y + ny * 8 - ay * s * 0.6]).fill(colors.ink)
-    doc.polygon([b.x, b.y], [b.x - nx * 8 + ax * s * 0.6, b.y - ny * 8 + ay * s * 0.6], [b.x - nx * 8 - ax * s * 0.6, b.y - ny * 8 - ay * s * 0.6]).fill(colors.ink)
-    const tx = (a.x + b.x) / 2 + ax * 12
-    const ty = (a.y + b.y) / 2 + ay * 12
-    doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(18).text(label, tx - 22, ty - 9, { width: 44, align: "center" })
+  const PW = 1190
+  const PH = 842
+  const C = {
+    paper: "#E8E4CF",
+    ink: "#2E3640",
+    thin: "#808890",
+    grid: "#D5D0BC"
   }
 
-  const rightX = 380
-  const rightW = 770
-  const style = getProjectStyle(project)
-  const scale = Math.min(8.6, (rightW - 170) / Math.max(1, L + W))
-  const sx = scale * 0.9
-  const sy = scale * 0.36
-  const sz = scale
-  const ox = rightX + 210
-  const oy = 690
+  doc.rect(0, 0, PW, PH).fill(C.paper)
+  for (let x = 0; x <= PW; x += 40) doc.moveTo(x, 0).lineTo(x, PH).strokeColor(C.grid).lineWidth(0.5).stroke()
+  for (let y = 0; y <= PH; y += 40) doc.moveTo(0, y).lineTo(PW, y).strokeColor(C.grid).lineWidth(0.5).stroke()
 
-  const topThk = Math.max(1.5, Math.min(6, H * 0.07))
-  const shelfZ = Math.max(5, H * 0.3)
-  const inset = Math.max(2, Math.min(6, Math.min(L, W) * 0.06))
+  const margin = 24
+  doc.rect(margin, margin, PW - margin * 2, PH - margin * 2).strokeColor(C.ink).lineWidth(1.2).stroke()
+  doc.rect(margin + 10, margin + 10, PW - (margin + 10) * 2, PH - (margin + 10) * 2).strokeColor(C.thin).lineWidth(0.8).stroke()
 
-  const A = iso(0, 0, 0, sx, sy, sz, ox, oy)
-  const B = iso(L, 0, 0, sx, sy, sz, ox, oy)
-  const C = iso(L, W, 0, sx, sy, sz, ox, oy)
-  const D = iso(0, W, 0, sx, sy, sz, ox, oy)
-  const E = iso(0, 0, H, sx, sy, sz, ox, oy)
-  const F = iso(L, 0, H, sx, sy, sz, ox, oy)
-  const G = iso(L, W, H, sx, sy, sz, ox, oy)
-  const H1 = iso(0, W, H, sx, sy, sz, ox, oy)
-  const E2 = iso(0, 0, H + topThk, sx, sy, sz, ox, oy)
-  const F2 = iso(L, 0, H + topThk, sx, sy, sz, ox, oy)
-  const G2 = iso(L, W, H + topThk, sx, sy, sz, ox, oy)
-  const H2 = iso(0, W, H + topThk, sx, sy, sz, ox, oy)
-  const SA = iso(inset, inset, shelfZ, sx, sy, sz, ox, oy)
-  const SB = iso(L - inset, inset, shelfZ, sx, sy, sz, ox, oy)
-  const SC = iso(L - inset, W - inset, shelfZ, sx, sy, sz, ox, oy)
-  const SD = iso(inset, W - inset, shelfZ, sx, sy, sz, ox, oy)
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(24).text(project.toUpperCase(), 0, 30, { width: PW, align: "center" })
+  doc.fillColor(C.thin).font("Helvetica-Oblique").fontSize(11).text("WELDBLUEPRINTS AI - FABRICATION DRAWING", 0, 60, { width: PW, align: "center" })
 
-  // Base envelope lines
-  line(A, B, 2.2); line(B, C, 2.2); line(C, D, 2.2); line(D, A, 2.2)
-  line(A, E, 2.2); line(B, F, 2.2); line(C, G, 2.2); line(D, H1, 2.2)
-  line(E, F, 2.0); line(F, G, 2.0); line(G, H1, 2.0); line(H1, E, 2.0)
-  line(E2, F2, 1.8); line(F2, G2, 1.8); line(G2, H2, 1.8); line(H2, E2, 1.8)
-  line(E, E2, 1.0); line(F, F2, 1.0); line(G, G2, 1.0); line(H1, H2, 1.0)
+  const frontBox = { x: 120, y: 140, w: 360, h: 220 }
+  const sideBox = { x: 540, y: 140, w: 200, h: 220 }
+  const isoBox = { x: 780, y: 95, w: 290, h: 240 }
+  const topBox = { x: 120, y: 390, w: 450, h: 250 }
+  const partBox = { x: 600, y: 390, w: 470, h: 250 }
+  const titleBox = { x: 600, y: 655, w: 470, h: 150 }
 
-  if (["table", "shelf", "furniture", "frame", "cart"].includes(style)) {
-    line(SA, SB, 1.4); line(SB, SC, 1.4); line(SC, SD, 1.4); line(SD, SA, 1.4)
-    for (let i = 0; i <= 8; i += 1) {
-      const t = i / 8
-      const p1 = { x: SA.x + (SD.x - SA.x) * t, y: SA.y + (SD.y - SA.y) * t }
-      const p2 = { x: SB.x + (SC.x - SB.x) * t, y: SB.y + (SC.y - SB.y) * t }
-      line(p1, p2, 0.75, colors.ink)
-    }
-    for (let i = 0; i <= 8; i += 1) {
-      const t = i / 8
-      const p1 = { x: SA.x + (SB.x - SA.x) * t, y: SA.y + (SB.y - SA.y) * t }
-      const p2 = { x: SD.x + (SC.x - SD.x) * t, y: SD.y + (SC.y - SD.y) * t }
-      line(p1, p2, 0.75, colors.ink)
-    }
-  } else if (style === "trailer" || style === "flatbed" || style === "rack") {
-    for (let i = 1; i < 7; i += 1) {
-      const t = i / 7
-      const p1 = iso(L * t, 0, H * 0.08, sx, sy, sz, ox, oy)
-      const p2 = iso(L * t, W, H * 0.08, sx, sy, sz, ox, oy)
-      line(p1, p2, 1.0, colors.ink)
-    }
-    const wheel1 = iso(L * 0.28, -W * 0.05, 0, sx, sy, sz, ox, oy)
-    const wheel2 = iso(L * 0.72, -W * 0.05, 0, sx, sy, sz, ox, oy)
-    doc.circle(wheel1.x, wheel1.y + 20, 14).strokeColor(colors.inkBold).lineWidth(1.2).stroke()
-    doc.circle(wheel2.x, wheel2.y + 20, 14).strokeColor(colors.inkBold).lineWidth(1.2).stroke()
-  } else if (style === "hoist") {
-    const mastA = iso(L * 0.44, W * 0.42, 0, sx, sy, sz, ox, oy)
-    const mastB = iso(L * 0.56, W * 0.58, H, sx, sy, sz, ox, oy)
-    const boomTip = iso(L * 0.98, W * 0.22, H * 0.92, sx, sy, sz, ox, oy)
-    const braceA = iso(L * 0.50, W * 0.5, H * 0.42, sx, sy, sz, ox, oy)
-    const braceB = iso(L * 0.18, W * 0.1, H * 0.06, sx, sy, sz, ox, oy)
-    line(mastA, mastB, 3.0)
-    line(mastB, boomTip, 2.2)
-    line(braceA, braceB, 1.8)
-    line(iso(L * 0.12, W * 0.1, 0, sx, sy, sz, ox, oy), iso(L * 0.88, W * 0.1, 0, sx, sy, sz, ox, oy), 2.2)
-    const hookTop = iso(L * 0.98, W * 0.22, H * 0.92, sx, sy, sz, ox, oy)
-    const hookBot = iso(L * 0.98, W * 0.22, H * 0.64, sx, sy, sz, ox, oy)
-    line(hookTop, hookBot, 1.0, colors.note)
-    doc.circle(hookBot.x, hookBot.y + 4, 4).strokeColor(colors.note).lineWidth(1).stroke()
-  } else if (style === "cage") {
-    const b1 = iso(L * 0.14, W * 0.2, 0, sx, sy, sz, ox, oy)
-    const b2 = iso(L * 0.86, W * 0.2, 0, sx, sy, sz, ox, oy)
-    const b3 = iso(L * 0.86, W * 0.8, 0, sx, sy, sz, ox, oy)
-    const b4 = iso(L * 0.14, W * 0.8, 0, sx, sy, sz, ox, oy)
-    const t1 = iso(L * 0.2, W * 0.25, H * 0.78, sx, sy, sz, ox, oy)
-    const t2 = iso(L * 0.5, W * 0.5, H, sx, sy, sz, ox, oy)
-    const t3 = iso(L * 0.82, W * 0.75, H * 0.78, sx, sy, sz, ox, oy)
-    line(b1, b2, 1.8); line(b2, b3, 1.8); line(b3, b4, 1.8); line(b4, b1, 1.8)
-    line(b1, t1, 2.0); line(b2, t2, 2.0); line(b3, t3, 2.0)
-    line(t1, t2, 2.0); line(t2, t3, 2.0)
-    line(iso(L * 0.24, W * 0.2, H * 0.18, sx, sy, sz, ox, oy), iso(L * 0.76, W * 0.72, H * 0.74, sx, sy, sz, ox, oy), 1.2, colors.note)
-  } else if (style === "murphy") {
-    const wall1 = iso(L * 0.04, 0, H, sx, sy, sz, ox, oy)
-    const wall2 = iso(L * 0.04, W, H, sx, sy, sz, ox, oy)
-    const panelA = iso(L * 0.34, W * 0.14, H * 0.84, sx, sy, sz, ox, oy)
-    const panelB = iso(L * 0.92, W * 0.84, H * 0.18, sx, sy, sz, ox, oy)
-    line(wall1, wall2, 2.4)
-    line(panelA, panelB, 2.2)
-    line(iso(L * 0.34, W * 0.14, H * 0.18, sx, sy, sz, ox, oy), iso(L * 0.92, W * 0.84, H * 0.84, sx, sy, sz, ox, oy), 1.2, colors.note)
-  } else if (style === "lift") {
-    const d1 = iso(L * 0.14, W * 0.15, H * 0.22, sx, sy, sz, ox, oy)
-    const d2 = iso(L * 0.9, W * 0.85, H * 0.22, sx, sy, sz, ox, oy)
-    const t1 = iso(L * 0.14, W * 0.15, H * 0.7, sx, sy, sz, ox, oy)
-    const t2 = iso(L * 0.9, W * 0.85, H * 0.7, sx, sy, sz, ox, oy)
-    line(d1, t2, 2.4)
-    line(d2, t1, 2.4)
-    const piv = iso(L * 0.52, W * 0.5, H * 0.46, sx, sy, sz, ox, oy)
-    doc.circle(piv.x, piv.y, 4).strokeColor(colors.note).lineWidth(1.1).stroke()
+  ;[frontBox, sideBox, isoBox, topBox, partBox, titleBox].forEach(b => {
+    doc.rect(b.x, b.y, b.w, b.h).strokeColor(C.thin).lineWidth(0.8).stroke()
+  })
+
+  const pxPerIn = Math.min((frontBox.w - 80) / Math.max(L, 1), (frontBox.h - 70) / Math.max(H, 1))
+  const wPx = L * pxPerIn
+  const hPx = H * pxPerIn
+  const depthPx = W * pxPerIn
+
+  const fx = frontBox.x + (frontBox.w - wPx) / 2
+  const fy = frontBox.y + frontBox.h - 40
+  doc.rect(fx, fy - hPx, wPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
+  doc.moveTo(fx + wPx * 0.5, fy - hPx).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+  doc.moveTo(fx + wPx * 0.15, fy - hPx * 0.55).lineTo(fx + wPx * 0.85, fy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+
+  const sx = sideBox.x + (sideBox.w - depthPx) / 2
+  const sy = sideBox.y + sideBox.h - 40
+  doc.rect(sx, sy - hPx, depthPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
+  doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.55).lineTo(sx + depthPx * 0.8, sy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+
+  const tx = topBox.x + (topBox.w - wPx) / 2
+  const ty = topBox.y + (topBox.h + depthPx) / 2
+  doc.rect(tx, ty - depthPx, wPx, depthPx).strokeColor(C.ink).lineWidth(1.6).stroke()
+  const leg = Math.max(8, Math.min(16, depthPx * 0.12))
+  doc.rect(tx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+  doc.rect(tx + wPx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+  doc.rect(tx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+  doc.rect(tx + wPx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+
+  function ip(x, y, z, ox, oy, sxp = 0.9, syp = 0.45, szp = 1) {
+    return { x: ox + (x - y) * sxp, y: oy + (x + y) * syp - z * szp }
+  }
+  const iScale = Math.min((isoBox.w - 80) / Math.max(L + W, 1), (isoBox.h - 70) / Math.max(H + W * 0.6, 1))
+  const iox = isoBox.x + isoBox.w * 0.5
+  const ioy = isoBox.y + isoBox.h * 0.78
+  const pA = ip(0, 0, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pB = ip(L, 0, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pC = ip(L, W, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pD = ip(0, W, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pE = ip(0, 0, H, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pF = ip(L, 0, H, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pG = ip(L, W, H, iox, ioy, iScale, iScale * 0.5, iScale)
+  const pH = ip(0, W, H, iox, ioy, iScale, iScale * 0.5, iScale)
+  const ln = (a, b, w = 1.2, col = C.ink) => doc.moveTo(a.x, a.y).lineTo(b.x, b.y).strokeColor(col).lineWidth(w).stroke()
+  ln(pA, pB); ln(pB, pC); ln(pC, pD); ln(pD, pA)
+  ln(pE, pF); ln(pF, pG); ln(pG, pH); ln(pH, pE)
+  ln(pA, pE); ln(pB, pF); ln(pC, pG); ln(pD, pH)
+
+  function dimH(x1, x2, y, text) {
+    doc.moveTo(x1, y).lineTo(x2, y).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(x1, y - 5).lineTo(x1, y + 5).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(x2, y - 5).lineTo(x2, y + 5).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.fillColor(C.ink).font("Helvetica").fontSize(10).text(text, (x1 + x2) / 2 - 22, y - 14, { width: 44, align: "center" })
+  }
+  function dimV(y1, y2, x, text) {
+    doc.moveTo(x, y1).lineTo(x, y2).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(x - 5, y1).lineTo(x + 5, y1).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(x - 5, y2).lineTo(x + 5, y2).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.fillColor(C.ink).font("Helvetica").fontSize(10).text(text, x + 8, (y1 + y2) / 2 - 6)
   }
 
-  dim(E2, F2, `${L}"`, 0, -36)
-  dim(F2, G2, `${W}"`, 48, -2)
-  dim(B, F, `${H}"`, 70, 0)
-  dim(SA, SB, `${Math.max(1, Math.round(L - inset * 2))}"`, 0, 20)
+  dimH(fx, fx + wPx, fy + 26, `${L.toFixed(0)}"`)
+  dimV(fy - hPx, fy, fx - 24, `${H.toFixed(0)}"`)
+  dimH(sx, sx + depthPx, sy + 26, `${W.toFixed(0)}"`)
 
-  const topLabel = style === "hoist" ? "BOOM / MAST ASSEMBLY" : style === "cage" ? "PRIMARY CAGE STRUCTURE" : style === "murphy" ? "FOLD-DOWN PANEL / WALL FRAME" : `${Math.max(3, Math.round(topThk * 4) / 4)}" STEEL PLATE TOP`
-  const legLabel = style === "trailer" ? "AXLE / DECK FRAME" : style === "lift" ? "SCISSOR ARMS" : `${Math.round(H)}" LEGS`
-  doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(24).text(topLabel, rightX + 250, 190)
-  doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(24).text(legLabel, rightX + 615, 455)
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("FRONT", frontBox.x + frontBox.w / 2 - 20, frontBox.y + frontBox.h - 18)
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("SIDE", sideBox.x + sideBox.w / 2 - 14, sideBox.y + sideBox.h - 18)
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("TOP", topBox.x + topBox.w / 2 - 12, topBox.y + topBox.h - 18)
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("ISOMETRIC", isoBox.x + isoBox.w / 2 - 28, isoBox.y + isoBox.h - 18)
 
-  function block(title, lines, x, y, width = 320) {
-    doc.fillColor(colors.inkBold).font("Helvetica-BoldOblique").fontSize(40).text(title.toUpperCase(), x, y, { width })
-    let yy = y + 42
-    lines.forEach(text => {
-      doc.fillColor(colors.note).font("Helvetica-BoldOblique").fontSize(18).text(text, x, yy, { width, lineGap: 1 })
-      yy += 30
-    })
-  }
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(11).text("PARTS LIST", partBox.x + 8, partBox.y + 8)
+  const col = [partBox.x + 8, partBox.x + 42, partBox.x + 258, partBox.x + 292, partBox.x + 358]
+  doc.font("Helvetica-Bold").fontSize(9)
+  doc.text("ITEM", col[0], partBox.y + 26)
+  doc.text("PART", col[1], partBox.y + 26)
+  doc.text("QTY", col[2], partBox.y + 26)
+  doc.text("LEN", col[3], partBox.y + 26)
+  doc.text("MATERIAL", col[4], partBox.y + 26)
+  doc.moveTo(partBox.x + 6, partBox.y + 40).lineTo(partBox.x + partBox.w - 6, partBox.y + 40).strokeColor(C.thin).lineWidth(0.8).stroke()
 
-  const parts = projectData.parts.slice(0, 8)
-  const p = i => (parts[i] ? `${String(parts[i][2]).toUpperCase()} ${String(parts[i][1]).toUpperCase()} ${String(parts[i][3]).toUpperCase()}` : "")
-  block("Upper Frame", [p(0), p(1), p(2), `${Math.max(2, Math.round(Math.min(L, W) / 8))}" WELDS`].filter(Boolean), 40, 155)
-  block("Tool Bracket", [p(3) || "ONE 14\" FLAT IRON LENGTH", "ONE 8\" FLAT IRON LENGTH", "OVERLAPPED, WELDED TO FRAME"], 40, 372)
-  block("Shelf", [p(4), p(5), "FOUR 12\"x24\" SECTIONS OF EXPANDED STEEL"].filter(Boolean), 40, 592)
-  block("Crossbars", [`${Math.max(2, Math.round((L - inset * 2) / 5))}" FLAT IRON LENGTHS`, "BUTT WELDED TO SHELF FRAME", "SPOT WELDED TO SUPPORTS"], 556, 712, 620)
+  const rows = projectData.parts.slice(0, 8)
+  rows.forEach((r, i) => {
+    const yy = partBox.y + 46 + i * 22
+    doc.font("Helvetica").fontSize(8.5).fillColor(C.ink)
+    doc.text(String(r[0]), col[0], yy)
+    doc.text(String(r[1]).slice(0, 33), col[1], yy)
+    doc.text(String(r[2]), col[2], yy)
+    doc.text(String(r[3]).slice(0, 11), col[3], yy)
+    doc.text(String(r[4]).slice(0, 18), col[4], yy)
+    doc.moveTo(partBox.x + 6, yy + 16).lineTo(partBox.x + partBox.w - 6, yy + 16).strokeColor(C.grid).lineWidth(0.6).stroke()
+  })
 
-  const metaY = pageHeight - 34
-  doc.fillColor(colors.note).font("Helvetica-Oblique").fontSize(12).text(
-    `PROJECT: ${project.toUpperCase()}    WELDER: ${welder.toUpperCase()}    PROCESS: ${process.toUpperCase()} ${wire.toUpperCase()} ${wiresize.toUpperCase()}    GAS: ${gas.toUpperCase()}    THICKNESS: ${thickness}    DATE: ${new Date().toLocaleDateString()}`,
-    40, metaY, { width: pageWidth - 80, align: "center" }
-  )
-  doc.fillColor(colors.note).font("Helvetica-Oblique").fontSize(11).text(
-    `VOLTAGE ${ws.volts}  |  WIRE FEED ${ws.wfs}  |  AMPERAGE ${ws.amps}  |  TECHNIQUE ${ws.technique}  |  PREHEAT ${ws.preheat}`,
-    40, metaY + 14, { width: pageWidth - 80, align: "center" }
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("BUILD NOTES", partBox.x + 8, partBox.y + 226)
+  doc.font("Helvetica").fontSize(8.5)
+  projectData.steps.slice(0, 3).forEach((s, i) => {
+    doc.text(`${i + 1}. ${s}`, partBox.x + 8, partBox.y + 240 + i * 11, { width: partBox.w - 16 })
+  })
+
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("TITLE BLOCK", titleBox.x + 8, titleBox.y + 8)
+  doc.moveTo(titleBox.x + 6, titleBox.y + 24).lineTo(titleBox.x + titleBox.w - 6, titleBox.y + 24).strokeColor(C.thin).lineWidth(0.8).stroke()
+  const tb = [
+    ["PROJECT", project],
+    ["DRAWING", `${project.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-assy`],
+    ["SIZE", `${L} x ${W} x ${H} in`],
+    ["WELDER", welder],
+    ["PROCESS", `${process} / ${wire} ${wiresize}`],
+    ["GAS", gas],
+    ["THICKNESS", thickness],
+    ["DATE", new Date().toLocaleDateString()],
+    ["WELD SET", `${ws.volts}V  ${ws.wfs}  ${ws.amps}`]
+  ]
+  tb.forEach((r, i) => {
+    const yy = titleBox.y + 30 + i * 12
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(C.thin).text(r[0], titleBox.x + 8, yy)
+    doc.font("Helvetica").fontSize(8.5).fillColor(C.ink).text(String(r[1]), titleBox.x + 90, yy, { width: titleBox.w - 98 })
+  })
+
+  doc.fillColor(C.thin).font("Helvetica").fontSize(9).text(
+    `NOT FOR ENGINEERING CERTIFICATION - VERIFY ALL DIMENSIONS BEFORE CUTTING`,
+    margin + 8,
+    PH - 20,
+    { width: PW - margin * 2 - 16, align: "center" }
   )
 }
 
@@ -1419,8 +2076,13 @@ app.post("/api/auth/login", rateLimit("login", 15, 15 * 60 * 1000), async (req, 
 })
 
 app.get("/api/auth/me", authenticateToken, (req, res) => {
-  const user = users.find(u => u.id === req.user.id)
-  if (!user) return res.status(404).json({ error: "User not found" })
+  const user = req.userRecord || findUserFromToken(req.user)
+  if (!user) {
+    return res.status(401).json({
+      error: "session_stale",
+      message: "Session no longer matches an existing account. Please sign in again."
+    })
+  }
   res.json({ user: makeSafeUser(user) })
 })
 
@@ -1431,7 +2093,7 @@ app.post("/api/auth/logout", (req, res) => {
 })
 
 app.post("/api/projects/save", authenticateToken, (req, res) => {
-  const user = users.find(u => u.id === req.user.id)
+  const user = req.userRecord || findUserFromToken(req.user)
   if (!user) return res.status(404).json({ error: "User not found" })
 
   const savedProject = {
@@ -1455,13 +2117,13 @@ app.post("/api/projects/save", authenticateToken, (req, res) => {
 })
 
 app.get("/api/projects/saved", authenticateToken, (req, res) => {
-  const list = savedProjects.filter(p => p.userId === req.user.id)
+  const list = savedProjects.filter(p => sameUserId(p.userId, req.user.id))
   res.json({ projects: list })
 })
 
 app.delete("/api/projects/:id", authenticateToken, (req, res) => {
   const projectId = Number(req.params.id)
-  const index = savedProjects.findIndex(p => p.id === projectId && p.userId === req.user.id)
+  const index = savedProjects.findIndex(p => p.id === projectId && sameUserId(p.userId, req.user.id))
   if (index === -1) return res.status(404).json({ error: "Project not found" })
 
   savedProjects.splice(index, 1)
@@ -1496,7 +2158,7 @@ app.post("/api/analyze-scrap", (req, res) => {
 })
 
 app.get("/api/subscription/status", authenticateToken, (req, res) => {
-  const user = users.find(u => u.id === req.user.id)
+  const user = req.userRecord || findUserFromToken(req.user)
   if (!user) return res.status(404).json({ error: "User not found" })
 
   res.json({
@@ -1518,7 +2180,7 @@ app.post("/api/subscription/activate", authenticateToken, rateLimit("subscribe",
     })
   }
 
-  const user = users.find(u => u.id === req.user.id)
+  const user = req.userRecord || findUserFromToken(req.user)
   if (!user) return res.status(404).json({ error: "User not found" })
 
   try {
@@ -1607,7 +2269,7 @@ app.post("/generate-blueprint", rateLimit("blueprint", 30, 15 * 60 * 1000), (req
   let user = null
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-    user = users.find(u => u.id === decoded.id)
+    user = findUserFromToken(decoded)
   } catch (err) {
     trackEvent("generate_error")
     return res.status(403).json({ error: "Invalid token" })
@@ -1615,8 +2277,14 @@ app.post("/generate-blueprint", rateLimit("blueprint", 30, 15 * 60 * 1000), (req
 
   if (!user) {
     trackEvent("generate_error")
-    return res.status(404).json({ error: "User not found" })
+    return res.status(401).json({
+      error: "session_stale",
+      message: "Session no longer matches an existing account. Please sign in again."
+    })
   }
+
+  const isPreview = req.query.preview === "1"
+  const shouldCountGeneration = !user.isPro && !isPreview
 
   if (!user.isPro) {
     const used = user.generationsUsed || 0
@@ -1627,14 +2295,8 @@ app.post("/generate-blueprint", rateLimit("blueprint", 30, 15 * 60 * 1000), (req
         upgradeUrl: "/pricing.html"
       })
     }
-
-    if (!req.query.preview) {
-      user.generationsUsed = used + 1
-      saveData()
-    }
   }
 
-  const isPreview = req.query.preview === "1"
   const doc = new PDFDocument({
     size: [1190, 842],
     margins: { top: 0, bottom: 0, left: 0, right: 0 }
@@ -1679,6 +2341,10 @@ app.post("/generate-blueprint", rateLimit("blueprint", 30, 15 * 60 * 1000), (req
       gas,
       thickness
     })
+    if (shouldCountGeneration) {
+      user.generationsUsed = (user.generationsUsed || 0) + 1
+      saveData()
+    }
     trackEvent("generate_success")
     safeEndDoc()
   } catch (err) {
@@ -1812,5 +2478,3 @@ app.listen(PORT, async () => {
     console.log("Blueprint validation: OK")
   }
 })
-
-

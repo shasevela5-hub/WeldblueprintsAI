@@ -1393,10 +1393,16 @@
         }
       })
 
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
         let data = null
         try { data = await response.clone().json() } catch (_) {}
-        if (data && (data.error === "Invalid token" || data.error === "No token provided" || data.error === "login_required")) {
+        if (data && (
+          data.error === "Invalid token" ||
+          data.error === "No token provided" ||
+          data.error === "login_required" ||
+          data.error === "session_stale" ||
+          data.error === "User not found"
+        )) {
           clearSession("Your login token is no longer valid. Please sign in again.")
         }
       }
@@ -1408,7 +1414,7 @@
       if (!token) return
       try {
         const response = await authFetch("/api/auth/me", { method: "GET" })
-        if (!response.ok && (response.status === 401 || response.status === 403)) {
+        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404)) {
           clearSession("Your previous session expired. Sign in again.")
         }
       } catch (_) {}

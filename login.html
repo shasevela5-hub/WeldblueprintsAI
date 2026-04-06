@@ -315,6 +315,10 @@
       margin-top: 10px;
     }
 
+    .form-head h2 {
+      margin-bottom: 4px;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -364,6 +368,50 @@
     select:focus {
       border-color: rgba(27,79,140,0.34);
       box-shadow: 0 0 0 4px rgba(27,79,140,0.08);
+    }
+
+    .password-wrap {
+      position: relative;
+    }
+
+    .password-wrap input {
+      padding-right: 88px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: 700 0.78rem/1 Arial, sans-serif;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+    }
+
+    .toggle-password:hover {
+      background: rgba(255,255,255,0.14);
+    }
+
+    .pw-toggle-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font: 700 0.78rem/1 Arial, sans-serif;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .pw-toggle-row input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--orange);
     }
 
     .form-actions {
@@ -489,10 +537,10 @@
       <section class="panel info">
         <div>
           <div class="eyebrow">Account Access</div>
-          <h1>Sign in, save your token, and generate PDFs.</h1>
+          <h1>Login fast and get back to building.</h1>
           <p>
-            Your browser stores the token after login so the generator page can call the protected
-            blueprint route without asking you again every time.
+            Sign in once and your browser keeps your session so you can generate blueprints
+            without re-entering credentials every time.
           </p>
         </div>
 
@@ -500,24 +548,24 @@
           <div class="step">
             <div class="step-no">1</div>
             <div>
-              <strong style="display:block; margin-bottom:6px;">Create or access your account</strong>
-              <p>Register once, or log in with the account you already use for saved projects and settings.</p>
+              <strong style="display:block; margin-bottom:6px;">Sign in or create your account</strong>
+              <p>Use your existing login or register in under a minute.</p>
             </div>
           </div>
 
           <div class="step">
             <div class="step-no">2</div>
             <div>
-              <strong style="display:block; margin-bottom:6px;">Store the browser token</strong>
-              <p>On success, the page saves your JWT and user state to local storage so pricing and generation stay in sync.</p>
+              <strong style="display:block; margin-bottom:6px;">Session stays active</strong>
+              <p>Your token is saved locally so pricing and generation stay synced.</p>
             </div>
           </div>
 
           <div class="step">
             <div class="step-no">3</div>
             <div>
-              <strong style="display:block; margin-bottom:6px;">Go back and generate</strong>
-              <p>Return to the main generator, preview the blueprint, or download the PDF directly.</p>
+              <strong style="display:block; margin-bottom:6px;">Generate and download</strong>
+              <p>Head back to the generator and create your next PDF blueprint.</p>
             </div>
           </div>
         </div>
@@ -532,7 +580,7 @@
         <section id="loginPanel" class="panel-form active">
           <div class="form-head">
             <h2>Login</h2>
-            <p>Use your existing account to enable blueprint generation.</p>
+            <p>Use your account to unlock saved projects and PDF generation.</p>
           </div>
 
           <form id="loginForm">
@@ -544,7 +592,14 @@
 
               <div class="field full">
                 <label for="loginPassword">Password</label>
-                <input id="loginPassword" type="password" placeholder="Your password" required />
+                <div class="password-wrap">
+                  <input id="loginPassword" type="password" placeholder="Your password" required />
+                  <button class="toggle-password" type="button" data-target="loginPassword" aria-label="Show password">Show</button>
+                </div>
+                <label class="pw-toggle-row" for="loginShowPassword">
+                  <input id="loginShowPassword" type="checkbox" />
+                  Show Password
+                </label>
               </div>
             </div>
 
@@ -558,7 +613,7 @@
         <section id="registerPanel" class="panel-form">
           <div class="form-head">
             <h2>Create account</h2>
-            <p>Register a new account and store the token immediately after signup.</p>
+            <p>Create your account and start generating right away.</p>
           </div>
 
           <form id="registerForm">
@@ -575,7 +630,14 @@
 
               <div class="field full">
                 <label for="registerPassword">Password</label>
-                <input id="registerPassword" type="password" placeholder="Create a password" required />
+                <div class="password-wrap">
+                  <input id="registerPassword" type="password" placeholder="Create a password" required />
+                  <button class="toggle-password" type="button" data-target="registerPassword" aria-label="Show password">Show</button>
+                </div>
+                <label class="pw-toggle-row" for="registerShowPassword">
+                  <input id="registerShowPassword" type="checkbox" />
+                  Show Password
+                </label>
               </div>
 
               <div class="field">
@@ -642,6 +704,9 @@
     const sessionState = document.getElementById("sessionState")
     const logoutBtn = document.getElementById("logoutBtn")
     const goHomeBtn = document.getElementById("goHomeBtn")
+    const passwordToggleButtons = document.querySelectorAll(".toggle-password")
+    const loginShowPassword = document.getElementById("loginShowPassword")
+    const registerShowPassword = document.getElementById("registerShowPassword")
 
     function setStatus(title, text, type) {
       statusBox.className = "status"
@@ -730,6 +795,40 @@
       updateSessionState()
       setStatus("Session cleared", "The saved browser token and user data were removed.", "success")
     })
+
+    passwordToggleButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target")
+        const input = document.getElementById(targetId)
+        if (!input) return
+        const showing = input.type === "text"
+        input.type = showing ? "password" : "text"
+        btn.textContent = showing ? "Show" : "Hide"
+        btn.setAttribute("aria-label", showing ? "Show password" : "Hide password")
+        if (targetId === "loginPassword" && loginShowPassword) loginShowPassword.checked = !showing
+        if (targetId === "registerPassword" && registerShowPassword) registerShowPassword.checked = !showing
+      })
+    })
+
+    if (loginShowPassword) {
+      loginShowPassword.addEventListener("change", () => {
+        const input = document.getElementById("loginPassword")
+        const btn = document.querySelector('.toggle-password[data-target="loginPassword"]')
+        const show = !!loginShowPassword.checked
+        input.type = show ? "text" : "password"
+        if (btn) btn.textContent = show ? "Hide" : "Show"
+      })
+    }
+
+    if (registerShowPassword) {
+      registerShowPassword.addEventListener("change", () => {
+        const input = document.getElementById("registerPassword")
+        const btn = document.querySelector('.toggle-password[data-target="registerPassword"]')
+        const show = !!registerShowPassword.checked
+        input.type = show ? "text" : "password"
+        if (btn) btn.textContent = show ? "Hide" : "Show"
+      })
+    }
 
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault()
