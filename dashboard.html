@@ -1,353 +1,628 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-<title>WeldBlueprint AI - Dashboard</title>
-<style>
-body{
-font-family: Arial;
-background:#111;
-color:white;
-margin:0;
-padding:20px;
-}
-.container{
-max-width:1200px;
-margin:0 auto;
-}
-.header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:30px;
-}
-.header h1{
-color:#ff6a00;
-margin:0;
-}
-.user-info{
-display:flex;
-align-items:center;
-gap:20px;
-}
-.logout-btn{
-background:#333;
-color:white;
-border:none;
-padding:10px 20px;
-border-radius:5px;
-cursor:pointer;
-}
-.logout-btn:hover{
-background:#ff4444;
-}
-.nav{
-display:flex;
-gap:10px;
-margin-bottom:30px;
-}
-.nav a{
-color:white;
-text-decoration:none;
-padding:10px 20px;
-background:#1e1e1e;
-border-radius:5px;
-}
-.nav a:hover{
-background:#333;
-}
-.nav a.active{
-background:#ff6a00;
-color:black;
-}
-.dashboard{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-}
-.card{
-background:#1e1e1e;
-padding:20px;
-border-radius:10px;
-}
-.card h2{
-color:#ff6a00;
-margin-top:0;
-}
-.project-list, .settings-list{
-margin-top:20px;
-}
-.project-item, .setting-item{
-background:#2a2a2a;
-padding:15px;
-border-radius:5px;
-margin-bottom:10px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-.project-info h3{
-margin:0 0 5px 0;
-color:#ff6a00;
-}
-.project-info p{
-margin:0;
-color:#888;
-font-size:14px;
-}
-.delete-btn{
-background:#ff4444;
-color:white;
-border:none;
-padding:5px 10px;
-border-radius:3px;
-cursor:pointer;
-font-size:12px;
-}
-.use-btn{
-background:#00aa00;
-color:white;
-border:none;
-padding:5px 10px;
-border-radius:3px;
-cursor:pointer;
-font-size:12px;
-margin-right:5px;
-}
-.empty-state{
-color:#888;
-text-align:center;
-padding:40px;
-}
-.stats-grid{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:15px;
-margin-bottom:20px;
-}
-.stat-card{
-background:#2a2a2a;
-padding:15px;
-text-align:center;
-border-radius:5px;
-}
-.stat-number{
-font-size:24px;
-color:#ff6a00;
-font-weight:bold;
-}
-.stat-label{
-color:#888;
-font-size:12px;
-margin-top:5px;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | WeldBlueprints AI</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <style>
+    :root {
+      --bg: #111820;
+      --paper: #1a2430;
+      --paper-strong: rgba(18, 26, 34, 0.92);
+      --panel: rgba(28, 38, 49, 0.9);
+      --ink: #eef3f8;
+      --muted: #b5c0cb;
+      --line: rgba(238, 242, 246, 0.14);
+      --line-strong: rgba(238, 242, 246, 0.24);
+      --orange: #e0672b;
+      --orange-soft: rgba(224, 103, 43, 0.16);
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.36);
+      --radius: 28px;
+      --radius-sm: 18px;
+      --max: 1140px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(224, 103, 43, 0.12), transparent 22%),
+        radial-gradient(circle at 90% 20%, rgba(76, 138, 201, 0.12), transparent 20%),
+        linear-gradient(180deg, #141d26 0%, #1a2530 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(21,21,21,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(21,21,21,0.03) 1px, transparent 1px);
+      background-size: 34px 34px;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      padding: 18px 0;
+    }
+
+    .topbar-inner {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 18px;
+      border: 1px solid var(--line);
+      background: rgba(20, 29, 39, 0.9);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 26px rgba(214, 90, 31, 0.22);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .brand-text {
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 0.96;
+      font-size: 1.1rem;
+    }
+
+    .brand-text strong {
+      color: var(--orange);
+      display: block;
+    }
+
+    .nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font: 700 0.82rem/1 Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .nav a.active {
+      color: var(--ink);
+      background: var(--orange-soft);
+      border-color: rgba(224, 103, 43, 0.3);
+    }
+
+    .session {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-pill {
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      font: 700 0.8rem/1 Arial, sans-serif;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .btn {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font: 800 0.82rem/1 Arial, sans-serif;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: transform 160ms ease, filter 160ms ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: linear-gradient(135deg, #ef7d45, var(--orange)); color: #10161e; }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line-strong); }
+    .btn-danger { background: rgba(207, 102, 102, 0.14); color: #ffd0d0; border: 1px solid rgba(207, 102, 102, 0.28); }
+    .btn-small { padding: 9px 13px; font-size: 0.74rem; }
+
+    .hero {
+      padding: 28px 0 18px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero-card,
+    .stats-card,
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero-card {
+      padding: 30px;
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr;
+      gap: 22px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      font: 800 0.76rem/1 Arial, sans-serif;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 12px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 0.98;
+      max-width: 12ch;
+    }
+
+    .hero-copy p {
+      margin-top: 14px;
+      color: var(--muted);
+      max-width: 58ch;
+      font-size: 1.02rem;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 12px;
+    }
+
+    .status-tile {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      background: var(--paper-strong);
+    }
+
+    .status-tile strong {
+      display: block;
+      font: 900 1.5rem/1 Arial, sans-serif;
+      color: var(--ink);
+      margin-top: 8px;
+    }
+
+    .status-tile span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stats-card {
+      padding: 20px;
+    }
+
+    .stats-card .label {
+      color: var(--muted);
+      font: 700 0.78rem/1 Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .stats-card .value {
+      font: 900 2rem/1 Arial, sans-serif;
+      color: var(--ink);
+    }
+
+    .stats-card .hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .content-grid {
+      padding: 8px 0 48px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .panel-title {
+      font-size: 1.5rem;
+    }
+
+    .panel-sub {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.03);
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .item h3 {
+      font-size: 1.02rem;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.5;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .empty {
+      border: 1px dashed var(--line-strong);
+      border-radius: 20px;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      background: rgba(255,255,255,0.02);
+    }
+
+    @media (max-width: 980px) {
+      .topbar-inner,
+      .hero-card,
+      .content-grid,
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        justify-content: flex-start;
+      }
+
+      .session {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        width: min(var(--max), calc(100% - 20px));
+      }
+
+      .topbar-inner,
+      .hero-card,
+      .panel,
+      .stats-card {
+        padding: 18px;
+      }
+
+      .item {
+        grid-template-columns: 1fr;
+      }
+
+      .item-actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
-<div class="header">
-<h1>🔧 My Dashboard</h1>
-<div class="user-info">
-<span id="welcomeMessage">Welcome!</span>
-<button class="logout-btn" onclick="logout()">Logout</button>
-</div>
-</div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/index.html">
+        <div class="brand-mark"><img src="/logo.svg" alt="WeldBlueprints AI logo" /></div>
+        <div class="brand-text">WELDBLUEPRINTS <strong>AI</strong></div>
+      </a>
 
-<div class="nav">
-<a href="/">🏠 Builder</a>
-<a href="/settings.html">⚡ Settings DB</a>
-<a href="/dashboard.html" class="active">📊 Dashboard</a>
-</div>
+      <nav class="nav">
+        <a href="/index.html">Generator</a>
+        <a href="/settings.html">Settings</a>
+        <a href="/pricing.html">Pricing</a>
+        <a href="/dashboard.html" class="active">Dashboard</a>
+      </nav>
 
-<div class="stats-grid">
-<div class="stat-card">
-<div class="stat-number" id="projectCount">0</div>
-<div class="stat-label">Saved Projects</div>
-</div>
-<div class="stat-card">
-<div class="stat-number" id="settingCount">0</div>
-<div class="stat-label">Saved Settings</div>
-</div>
-<div class="stat-card">
-<div class="stat-number" id="favoriteCount">0</div>
-<div class="stat-label">Favorites</div>
-</div>
-</div>
+      <div class="session">
+        <div class="user-pill" id="userPill">Account</div>
+        <button class="btn btn-ghost" id="logoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+  </header>
 
-<div class="dashboard">
-<!-- Saved Projects -->
-<div class="card">
-<h2>📁 Saved Projects</h2>
-<div id="projectsList" class="project-list">
-<div class="empty-state">No saved projects yet</div>
-</div>
-</div>
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="hero-copy">
+          <div class="eyebrow">Account Workspace</div>
+          <h1 id="welcomeHeading">Your shop dashboard.</h1>
+          <p>Review saved blueprint setups, keep track of custom welder settings, and jump straight back into the generator.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/index.html">Open Generator</a>
+            <a class="btn btn-ghost" href="/settings.html">Browse Settings DB</a>
+          </div>
+        </div>
 
-<!-- Saved Settings -->
-<div class="card">
-<h2>⚙️ Saved Settings</h2>
-<div id="settingsList" class="settings-list">
-<div class="empty-state">No saved settings yet</div>
-</div>
-</div>
-</div>
-</div>
+        <div class="hero-side">
+          <div class="status-tile">
+            <span>Plan Status</span>
+            <strong id="planStatus">Free</strong>
+          </div>
+          <div class="status-tile">
+            <span>Member Since</span>
+            <strong id="memberSince">Recently</strong>
+          </div>
+        </div>
+      </div>
 
-<script>
-// Check if user is logged in
-const token = localStorage.getItem('token')
-const user = JSON.parse(localStorage.getItem('user') || '{}')
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="label">Saved Projects</div>
+          <div class="value" id="projectCount">0</div>
+          <div class="hint">Reusable blueprint inputs ready to reopen.</div>
+        </div>
+        <div class="stats-card">
+          <div class="label">Saved Settings</div>
+          <div class="value" id="settingCount">0</div>
+          <div class="hint">Custom machine settings linked to your account.</div>
+        </div>
+        <div class="stats-card">
+          <div class="label">Blueprints Used</div>
+          <div class="value" id="generationCount">0</div>
+          <div class="hint" id="generationHint">Track how much of the free plan has been used.</div>
+        </div>
+      </div>
+    </section>
 
-if (!token) {
-window.location.href = '/login.html'
-}
+    <section class="content-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Saved Projects</h2>
+            <p class="panel-sub">Launch a previous setup or clear out old project drafts.</p>
+          </div>
+        </div>
+        <div id="projectsList" class="list">
+          <div class="empty">No saved projects yet.</div>
+        </div>
+      </section>
 
-document.getElementById('welcomeMessage').innerHTML = `Welcome, ${user.username || 'Welder'}!`
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Saved Welder Settings</h2>
+            <p class="panel-sub">Your submitted settings live here so you can reuse or remove them later.</p>
+          </div>
+        </div>
+        <div id="settingsList" class="list">
+          <div class="empty">No saved settings yet.</div>
+        </div>
+      </section>
+    </section>
+  </main>
 
-// Load saved projects
-async function loadProjects() {
-try {
-const response = await fetch('http://localhost:3000/api/projects/saved', {
-headers: {
-'Authorization': `Bearer ${token}`
-}
-})
-const data = await response.json()
-const projectsList = document.getElementById('projectsList')
-document.getElementById('projectCount').innerHTML = data.projects.length
+  <script>
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token") || ""
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-if (data.projects.length === 0) {
-projectsList.innerHTML = '<div class="empty-state">No saved projects yet</div>'
-return
-}
+    if (!token) window.location.href = "/login.html"
 
-projectsList.innerHTML = ''
-data.projects.forEach(project => {
-const item = document.createElement('div')
-item.className = 'project-item'
-item.innerHTML = `
-<div class="project-info">
-<h3>${project.project}</h3>
-<p>${project.dimensions} | ${project.welder} | ${project.process}</p>
-<small>Saved: ${new Date(project.savedAt).toLocaleDateString()}</small>
-</div>
-<div>
-<button class="use-btn" onclick="useProject(${project.id})">Use</button>
-<button class="delete-btn" onclick="deleteProject(${project.id})">Delete</button>
-</div>
-`
-projectsList.appendChild(item)
-})
-} catch(err) {
-console.error('Error loading projects:', err)
-}
-}
+    const userPill = document.getElementById("userPill")
+    const logoutBtn = document.getElementById("logoutBtn")
+    const welcomeHeading = document.getElementById("welcomeHeading")
+    const memberSince = document.getElementById("memberSince")
+    const planStatus = document.getElementById("planStatus")
+    const projectCount = document.getElementById("projectCount")
+    const settingCount = document.getElementById("settingCount")
+    const generationCount = document.getElementById("generationCount")
+    const generationHint = document.getElementById("generationHint")
+    const projectsList = document.getElementById("projectsList")
+    const settingsList = document.getElementById("settingsList")
 
-// Load saved settings
-async function loadSettings() {
-try {
-const response = await fetch('http://localhost:3000/api/settings/saved', {
-headers: {
-'Authorization': `Bearer ${token}`
-}
-})
-const data = await response.json()
-const settingsList = document.getElementById('settingsList')
-document.getElementById('settingCount').innerHTML = data.settings.length
+    userPill.textContent = user && user.email ? user.email : "Account"
+    welcomeHeading.textContent = `Welcome back, ${user.username || "Welder"}.`
+    planStatus.textContent = user.isPro ? "Pro" : "Free"
+    memberSince.textContent = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Recently"
+    generationCount.textContent = user.generationsUsed || 0
+    generationHint.textContent = user.isPro
+      ? "Unlimited blueprint generation is active on this account."
+      : "Free accounts include 3 blueprint downloads before upgrade."
 
-if (data.settings.length === 0) {
-settingsList.innerHTML = '<div class="empty-state">No saved settings yet</div>'
-return
-}
+    function authHeaders(extra = {}) {
+      return { ...extra, "Authorization": `Bearer ${token}` }
+    }
 
-settingsList.innerHTML = ''
-data.settings.forEach(setting => {
-const item = document.createElement('div')
-item.className = 'project-item'
-item.innerHTML = `
-<div class="project-info">
-<h3>${setting.welder} - ${setting.thickness}"</h3>
-<p>${setting.process} | ${setting.volts || ''} ${setting.wireSpeed || ''}</p>
-<small>Used: ${setting.usedCount} times</small>
-</div>
-<div>
-<button class="use-btn" onclick="useSetting(${setting.id})">Use</button>
-<button class="delete-btn" onclick="deleteSetting(${setting.id})">Delete</button>
-</div>
-`
-settingsList.appendChild(item)
-})
-} catch(err) {
-console.error('Error loading settings:', err)
-}
-}
+    function renderEmpty(target, text) {
+      target.innerHTML = `<div class="empty">${text}</div>`
+    }
 
-// Delete project
-async function deleteProject(id) {
-if (!confirm('Delete this project?')) return
+    function logout() {
+      localStorage.removeItem("token")
+      sessionStorage.removeItem("token")
+      localStorage.removeItem("user")
+      window.location.href = "/login.html"
+    }
 
-try {
-const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
-method: 'DELETE',
-headers: {
-'Authorization': `Bearer ${token}`
-}
-})
-if (response.ok) {
-loadProjects()
-}
-} catch(err) {
-console.error('Error deleting project:', err)
-}
-}
+    function useProject(id) {
+      window.location.href = "/index.html"
+    }
 
-// Use project (load into builder)
-function useProject(id) {
-window.location.href = '/'
-}
+    function useSetting(id) {
+      fetch(`/api/settings/${id}/used`, {
+        method: "POST",
+        headers: authHeaders()
+      }).catch(() => {})
+      window.location.href = "/settings.html"
+    }
 
-// Delete setting
-async function deleteSetting(id) {
-if (!confirm('Delete this setting?')) return
+    async function deleteProject(id) {
+      if (!confirm("Delete this project?")) return
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+        headers: authHeaders()
+      })
+      if (response.ok) loadProjects()
+    }
 
-try {
-const response = await fetch(`http://localhost:3000/api/settings/${id}`, {
-method: 'DELETE',
-headers: {
-'Authorization': `Bearer ${token}`
-}
-})
-if (response.ok) {
-loadSettings()
-}
-} catch(err) {
-console.error('Error deleting setting:', err)
-}
-}
+    async function deleteSetting(id) {
+      if (!confirm("Delete this setting?")) return
+      const response = await fetch(`/api/settings/${id}`, {
+        method: "DELETE",
+        headers: authHeaders()
+      })
+      if (response.ok) loadSettings()
+    }
 
-// Use setting
-function useSetting(id) {
-// Mark as used
-fetch(`http://localhost:3000/api/settings/${id}/used`, {
-method: 'POST',
-headers: {
-'Authorization': `Bearer ${token}`
-}
-})
-window.location.href = '/settings.html'
-}
+    async function loadProjects() {
+      try {
+        const response = await fetch("/api/projects/saved", {
+          headers: authHeaders()
+        })
+        const data = await response.json()
+        const projects = Array.isArray(data.projects) ? data.projects : []
+        projectCount.textContent = projects.length
 
-// Logout
-function logout() {
-localStorage.removeItem('token')
-localStorage.removeItem('user')
-window.location.href = '/login.html'
-}
+        if (!projects.length) {
+          renderEmpty(projectsList, "No saved projects yet.")
+          return
+        }
 
-// Load data
-loadProjects()
-loadSettings()
-</script>
+        projectsList.innerHTML = projects.map(project => `
+          <article class="item">
+            <div>
+              <h3>${project.project}</h3>
+              <div class="meta">${project.dimensions} | ${project.welder} | ${project.process}</div>
+              <div class="meta">Saved ${new Date(project.savedAt).toLocaleDateString()}</div>
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-primary btn-small" onclick="useProject(${project.id})" type="button">Use</button>
+              <button class="btn btn-danger btn-small" onclick="deleteProject(${project.id})" type="button">Delete</button>
+            </div>
+          </article>
+        `).join("")
+      } catch (_) {
+        renderEmpty(projectsList, "Saved projects could not be loaded.")
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const response = await fetch("/api/settings/saved", {
+          headers: authHeaders()
+        })
+        const data = await response.json()
+        const settings = Array.isArray(data.settings) ? data.settings : []
+        settingCount.textContent = settings.length
+
+        if (!settings.length) {
+          renderEmpty(settingsList, "No saved settings yet.")
+          return
+        }
+
+        settingsList.innerHTML = settings.map(setting => `
+          <article class="item">
+            <div>
+              <h3>${setting.welder} | ${setting.process} | ${setting.thickness}</h3>
+              <div class="meta">Volts: ${setting.volts || "n/a"} | Wire Speed: ${setting.wireSpeed || "n/a"} | Gas: ${setting.gas || "n/a"}</div>
+              <div class="meta">Technique: ${setting.technique || "Community submitted"} | Used ${setting.usedCount || 0} times</div>
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-primary btn-small" onclick="useSetting(${setting.id})" type="button">Use</button>
+              <button class="btn btn-danger btn-small" onclick="deleteSetting(${setting.id})" type="button">Delete</button>
+            </div>
+          </article>
+        `).join("")
+      } catch (_) {
+        renderEmpty(settingsList, "Saved settings could not be loaded.")
+      }
+    }
+
+    logoutBtn.addEventListener("click", logout)
+    loadProjects()
+    loadSettings()
+  </script>
 </body>
 </html>

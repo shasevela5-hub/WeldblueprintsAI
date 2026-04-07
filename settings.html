@@ -2,6 +2,7 @@
 <html>
 
 <head>
+<meta charset="UTF-8">
 <title>WeldBlueprint AI - Weld Settings Database</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -579,6 +580,7 @@ body::before {
 <script>
 let currentWelder = null
 let allWelders = []
+const token = localStorage.getItem('token') || sessionStorage.getItem('token') || ''
 
 // Load welders on page load
 async function loadWelders() {
@@ -727,7 +729,10 @@ userName: document.getElementById('userName').value || 'Anonymous'
 try {
 const response = await fetch('/api/settings/add', {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
+headers: {
+'Content-Type': 'application/json',
+...(token ? { 'Authorization': `Bearer ${token}` } : {})
+},
 body: JSON.stringify(data)
 })
 

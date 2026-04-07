@@ -27,7 +27,7 @@ const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || ""
 const PAYPAL_BASE_URL = process.env.PAYPAL_BASE_URL || "https://api-m.sandbox.paypal.com"
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@weldblueprints.ai"
 const PRO_PRICE_USD = "19.99"
-const FREE_GENERATION_LIMIT = Number(process.env.FREE_GENERATION_LIMIT || 25)
+const FREE_GENERATION_LIMIT = Number(process.env.FREE_GENERATION_LIMIT || 3)
 
 app.use(cors({
   origin: APP_ORIGIN,
@@ -36,10 +36,33 @@ app.use(cors({
 
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true }))
-app.use(express.static(__dirname))
+
+function sendHtmlWithReplacements(res, fileName, replacements = {}) {
+  try {
+    const filePath = path.join(__dirname, fileName)
+    let html = fs.readFileSync(filePath, "utf8")
+    for (const [needle, value] of Object.entries(replacements)) {
+      html = html.replaceAll(needle, value)
+    }
+    res.type("html").send(html)
+  } catch (err) {
+    console.error(`Failed to render ${fileName}:`, err.message)
+    res.status(500).send("Page render failed")
+  }
+}
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"))
 })
+app.get("/pricing.html", (req, res) => {
+  sendHtmlWithReplacements(res, "pricing.html", {
+    "YOUR_PAYPAL_CLIENT_ID": PAYPAL_CLIENT_ID || ""
+  })
+})
+app.get("/healthz", (req, res) => {
+  res.json({ ok: true, env: NODE_ENV })
+})
+app.use(express.static(__dirname))
 const sessionDir = path.join(__dirname, "sessions")
 function buildSessionStore() {
   if (SESSION_STORE === "file") {
@@ -332,6 +355,19 @@ function authenticateToken(req, res, next) {
     req.userRecord = findUserFromToken(decoded)
     next()
   })
+}
+
+function tryAuthenticateToken(req) {
+  const authHeader = req.headers.authorization
+  const token = authHeader && authHeader.split(" ")[1]
+  if (!token) return null
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET)
+    return findUserFromToken(decoded)
+  } catch (_) {
+    return null
+  }
 }
 
 function requireAdmin(req, res, next) {
@@ -1796,6 +1832,7 @@ function drawBlueprint(doc, payload) {
   const topBox = { x: 120, y: 390, w: 450, h: 250 }
   const partBox = { x: 600, y: 390, w: 470, h: 250 }
   const titleBox = { x: 600, y: 655, w: 470, h: 150 }
+  const style = getProjectStyle(project)
 
   ;[frontBox, sideBox, isoBox, topBox, partBox, titleBox].forEach(b => {
     doc.rect(b.x, b.y, b.w, b.h).strokeColor(C.thin).lineWidth(0.8).stroke()
@@ -1808,23 +1845,94 @@ function drawBlueprint(doc, payload) {
 
   const fx = frontBox.x + (frontBox.w - wPx) / 2
   const fy = frontBox.y + frontBox.h - 40
-  doc.rect(fx, fy - hPx, wPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
-  doc.moveTo(fx + wPx * 0.5, fy - hPx).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
-  doc.moveTo(fx + wPx * 0.15, fy - hPx * 0.55).lineTo(fx + wPx * 0.85, fy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+  if (style === "cage") {
+    const rearW = wPx * 0.78
+    const rearX = fx + (wPx - rearW) / 2
+    const rearTopY = fy - hPx * 0.88
+    doc.moveTo(rearX, fy).lineTo(rearX, rearTopY).strokeColor(C.ink).lineWidth(1.5).stroke()
+    doc.moveTo(rearX + rearW, fy).lineTo(rearX + rearW, rearTopY).strokeColor(C.ink).lineWidth(1.5).stroke()
+    doc.moveTo(rearX, rearTopY).lineTo(rearX + rearW, rearTopY).strokeColor(C.ink).lineWidth(1.5).stroke()
+    const frontW = wPx * 0.56
+    const frontX = fx + (wPx - frontW) / 2
+    const frontTopY = fy - hPx * 0.70
+    doc.moveTo(frontX, fy).lineTo(frontX, frontTopY).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.moveTo(frontX + frontW, fy).lineTo(frontX + frontW, frontTopY).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.moveTo(frontX, frontTopY).lineTo(frontX + frontW, frontTopY).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.moveTo(rearX, rearTopY).lineTo(frontX, frontTopY).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.moveTo(rearX + rearW, rearTopY).lineTo(frontX + frontW, frontTopY).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.moveTo(rearX + rearW * 0.2, fy - hPx * 0.45).lineTo(frontX + frontW * 0.2, fy - hPx * 0.35).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.moveTo(rearX + rearW * 0.8, fy - hPx * 0.45).lineTo(frontX + frontW * 0.8, fy - hPx * 0.35).strokeColor(C.thin).lineWidth(1).stroke()
+  } else if (style === "trailer" || style === "flatbed" || style === "rack" || style === "skid") {
+    const deckH = hPx * 0.35
+    doc.rect(fx, fy - deckH, wPx, deckH).strokeColor(C.ink).lineWidth(1.6).stroke()
+    for (let i = 1; i < 5; i += 1) {
+      const x = fx + (wPx / 5) * i
+      doc.moveTo(x, fy - deckH).lineTo(x, fy).strokeColor(C.thin).lineWidth(0.8).stroke()
+    }
+    if (style === "trailer" || style === "flatbed") {
+      doc.circle(fx + wPx * 0.25, fy + 12, 10).strokeColor(C.ink).lineWidth(1.2).stroke()
+      doc.circle(fx + wPx * 0.75, fy + 12, 10).strokeColor(C.ink).lineWidth(1.2).stroke()
+    }
+  } else if (style === "hoist") {
+    doc.moveTo(fx + wPx * 0.1, fy).lineTo(fx + wPx * 0.9, fy).strokeColor(C.ink).lineWidth(1.6).stroke()
+    doc.moveTo(fx + wPx * 0.5, fy).lineTo(fx + wPx * 0.5, fy - hPx * 0.88).strokeColor(C.ink).lineWidth(2).stroke()
+    doc.moveTo(fx + wPx * 0.5, fy - hPx * 0.88).lineTo(fx + wPx * 0.92, fy - hPx * 0.78).strokeColor(C.ink).lineWidth(1.6).stroke()
+    doc.moveTo(fx + wPx * 0.5, fy - hPx * 0.45).lineTo(fx + wPx * 0.2, fy - hPx * 0.08).strokeColor(C.thin).lineWidth(1).stroke()
+  } else if (style === "lift") {
+    const yLow = fy - hPx * 0.25
+    const yTop = fy - hPx * 0.72
+    doc.rect(fx + wPx * 0.1, yTop - 10, wPx * 0.8, 10).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.rect(fx + wPx * 0.1, yLow, wPx * 0.8, 10).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.moveTo(fx + wPx * 0.2, yLow + 10).lineTo(fx + wPx * 0.8, yTop).strokeColor(C.ink).lineWidth(1.4).stroke()
+    doc.moveTo(fx + wPx * 0.8, yLow + 10).lineTo(fx + wPx * 0.2, yTop).strokeColor(C.ink).lineWidth(1.4).stroke()
+  } else {
+    doc.rect(fx, fy - hPx, wPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
+    doc.moveTo(fx + wPx * 0.5, fy - hPx).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(fx + wPx * 0.15, fy - hPx * 0.55).lineTo(fx + wPx * 0.85, fy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+  }
 
   const sx = sideBox.x + (sideBox.w - depthPx) / 2
   const sy = sideBox.y + sideBox.h - 40
-  doc.rect(sx, sy - hPx, depthPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
-  doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.55).lineTo(sx + depthPx * 0.8, sy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+  if (style === "cage") {
+    const topY = sy - hPx * 0.75
+    doc.moveTo(sx + depthPx * 0.15, sy).lineTo(sx + depthPx * 0.15, topY).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.moveTo(sx + depthPx * 0.85, sy).lineTo(sx + depthPx * 0.85, topY + hPx * 0.12).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.moveTo(sx + depthPx * 0.15, topY).lineTo(sx + depthPx * 0.85, topY + hPx * 0.12).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.35).lineTo(sx + depthPx * 0.82, sy - hPx * 0.28).strokeColor(C.thin).lineWidth(1).stroke()
+  } else if (style === "trailer" || style === "flatbed" || style === "rack" || style === "skid") {
+    const deckH = hPx * 0.35
+    doc.rect(sx, sy - deckH, depthPx, deckH).strokeColor(C.ink).lineWidth(1.5).stroke()
+  } else if (style === "hoist") {
+    doc.moveTo(sx + depthPx * 0.1, sy).lineTo(sx + depthPx * 0.9, sy).strokeColor(C.ink).lineWidth(1.5).stroke()
+    doc.moveTo(sx + depthPx * 0.45, sy).lineTo(sx + depthPx * 0.45, sy - hPx * 0.85).strokeColor(C.ink).lineWidth(1.9).stroke()
+    doc.moveTo(sx + depthPx * 0.45, sy - hPx * 0.85).lineTo(sx + depthPx * 0.9, sy - hPx * 0.7).strokeColor(C.ink).lineWidth(1.5).stroke()
+  } else if (style === "lift") {
+    const yLow = sy - hPx * 0.22
+    const yTop = sy - hPx * 0.70
+    doc.rect(sx + depthPx * 0.1, yTop - 8, depthPx * 0.8, 8).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.rect(sx + depthPx * 0.1, yLow, depthPx * 0.8, 8).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.moveTo(sx + depthPx * 0.2, yLow + 8).lineTo(sx + depthPx * 0.8, yTop).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.moveTo(sx + depthPx * 0.8, yLow + 8).lineTo(sx + depthPx * 0.2, yTop).strokeColor(C.ink).lineWidth(1.3).stroke()
+  } else {
+    doc.rect(sx, sy - hPx, depthPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
+    doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.55).lineTo(sx + depthPx * 0.8, sy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+  }
 
   const tx = topBox.x + (topBox.w - wPx) / 2
   const ty = topBox.y + (topBox.h + depthPx) / 2
   doc.rect(tx, ty - depthPx, wPx, depthPx).strokeColor(C.ink).lineWidth(1.6).stroke()
   const leg = Math.max(8, Math.min(16, depthPx * 0.12))
-  doc.rect(tx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
-  doc.rect(tx + wPx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
-  doc.rect(tx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
-  doc.rect(tx + wPx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+  if (style === "cage") {
+    doc.moveTo(tx + wPx * 0.15, ty - depthPx * 0.2).lineTo(tx + wPx * 0.85, ty - depthPx * 0.2).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.moveTo(tx + wPx * 0.2, ty - depthPx * 0.75).lineTo(tx + wPx * 0.8, ty - depthPx * 0.75).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.moveTo(tx + wPx * 0.2, ty - depthPx * 0.75).lineTo(tx + wPx * 0.15, ty - depthPx * 0.2).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.moveTo(tx + wPx * 0.8, ty - depthPx * 0.75).lineTo(tx + wPx * 0.85, ty - depthPx * 0.2).strokeColor(C.thin).lineWidth(1).stroke()
+  } else {
+    doc.rect(tx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.rect(tx + wPx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.rect(tx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.rect(tx + wPx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+  }
 
   function ip(x, y, z, ox, oy, sxp = 0.9, syp = 0.45, szp = 1) {
     return { x: ox + (x - y) * sxp, y: oy + (x + y) * syp - z * szp }
@@ -1841,9 +1949,32 @@ function drawBlueprint(doc, payload) {
   const pG = ip(L, W, H, iox, ioy, iScale, iScale * 0.5, iScale)
   const pH = ip(0, W, H, iox, ioy, iScale, iScale * 0.5, iScale)
   const ln = (a, b, w = 1.2, col = C.ink) => doc.moveTo(a.x, a.y).lineTo(b.x, b.y).strokeColor(col).lineWidth(w).stroke()
-  ln(pA, pB); ln(pB, pC); ln(pC, pD); ln(pD, pA)
-  ln(pE, pF); ln(pF, pG); ln(pG, pH); ln(pH, pE)
-  ln(pA, pE); ln(pB, pF); ln(pC, pG); ln(pD, pH)
+  if (style === "cage") {
+    ln(pE, pF); ln(pF, pG); ln(pG, pH); ln(pH, pE, 1.2)
+    ln(pA, pE); ln(pB, pF); ln(pC, pG); ln(pD, pH)
+    const q1 = ip(L * 0.2, W * 0.25, H * 0.45, iox, ioy, iScale, iScale * 0.5, iScale)
+    const q2 = ip(L * 0.8, W * 0.25, H * 0.45, iox, ioy, iScale, iScale * 0.5, iScale)
+    const q3 = ip(L * 0.2, W * 0.75, H * 0.45, iox, ioy, iScale, iScale * 0.5, iScale)
+    const q4 = ip(L * 0.8, W * 0.75, H * 0.45, iox, ioy, iScale, iScale * 0.5, iScale)
+    ln(q1, q2, 1.1, C.thin); ln(q3, q4, 1.1, C.thin)
+  } else if (style === "hoist") {
+    const m1 = ip(L * 0.45, W * 0.5, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+    const m2 = ip(L * 0.45, W * 0.5, H * 0.9, iox, ioy, iScale, iScale * 0.5, iScale)
+    const b1 = ip(L * 0.9, W * 0.2, H * 0.78, iox, ioy, iScale, iScale * 0.5, iScale)
+    ln(pA, pB); ln(pB, pC); ln(pC, pD); ln(pD, pA)
+    ln(m1, m2, 1.8); ln(m2, b1, 1.5)
+  } else if (style === "trailer" || style === "flatbed") {
+    ln(pA, pB); ln(pB, pC); ln(pC, pD); ln(pD, pA)
+    ln(pE, pF, 1.2); ln(pF, pG, 1.2); ln(pG, pH, 1.2); ln(pH, pE, 1.2)
+    const wh1 = ip(L * 0.25, -W * 0.06, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+    const wh2 = ip(L * 0.75, -W * 0.06, 0, iox, ioy, iScale, iScale * 0.5, iScale)
+    doc.circle(wh1.x, wh1.y + 8, 7).strokeColor(C.ink).lineWidth(1).stroke()
+    doc.circle(wh2.x, wh2.y + 8, 7).strokeColor(C.ink).lineWidth(1).stroke()
+  } else {
+    ln(pA, pB); ln(pB, pC); ln(pC, pD); ln(pD, pA)
+    ln(pE, pF); ln(pF, pG); ln(pG, pH); ln(pH, pE)
+    ln(pA, pE); ln(pB, pF); ln(pC, pG); ln(pD, pH)
+  }
 
   function dimH(x1, x2, y, text) {
     doc.moveTo(x1, y).lineTo(x2, y).strokeColor(C.thin).lineWidth(0.9).stroke()
@@ -2140,12 +2271,112 @@ app.get("/api/welders", (req, res) => {
   res.json(welderList)
 })
 
+app.post("/api/settings/add", rateLimit("settings-add", 20, 15 * 60 * 1000), (req, res) => {
+  const user = tryAuthenticateToken(req)
+  const welder = sanitizeText(req.body.welder, 80)
+  const process = sanitizeText(req.body.process, 40)
+  const thickness = sanitizeText(req.body.thickness, 20)
+  const volts = sanitizeText(req.body.volts, 20)
+  const wireSpeed = sanitizeText(req.body.wireSpeed, 20)
+  const gas = sanitizeText(req.body.gas, 40)
+  const technique = sanitizeText(req.body.technique, 80)
+  const userName = sanitizeText(req.body.userName, 60) || "Anonymous"
+
+  if (!welder || !process || !thickness) {
+    return res.status(400).json({ error: "Welder, process, and thickness are required" })
+  }
+
+  if (!weldSettingsDB[welder]) {
+    return res.status(404).json({ error: "Welder not found" })
+  }
+
+  const setting = {
+    id: Date.now(),
+    userId: user ? user.id : null,
+    welder,
+    process,
+    thickness,
+    volts,
+    wireSpeed,
+    gas,
+    technique,
+    userName,
+    usedCount: 0,
+    createdAt: new Date().toISOString()
+  }
+
+  savedSettings.push(setting)
+  if (user) {
+    user.savedSettings = user.savedSettings || []
+    user.savedSettings.push(setting.id)
+  }
+  saveData()
+
+  res.json({ success: true, setting })
+})
+
+app.get("/api/settings/saved", authenticateToken, (req, res) => {
+  const list = savedSettings.filter(setting => sameUserId(setting.userId, req.user.id))
+  res.json({ settings: list })
+})
+
 app.get("/api/settings/:welder", (req, res) => {
   const welder = req.params.welder
   if (!weldSettingsDB[welder]) {
     return res.status(404).json({ error: "Welder not found" })
   }
-  res.json(weldSettingsDB[welder])
+
+  const base = JSON.parse(JSON.stringify(weldSettingsDB[welder]))
+  const communitySettings = savedSettings.filter(setting => setting.welder === welder)
+
+  communitySettings.forEach(setting => {
+    if (!base.settings[setting.process]) base.settings[setting.process] = {}
+    base.settings[setting.process][setting.thickness] = {
+      ...base.settings[setting.process][setting.thickness],
+      ...(setting.volts ? { volts: setting.volts } : {}),
+      ...(setting.wireSpeed ? { wireSpeed: setting.wireSpeed } : {}),
+      ...(setting.gas ? { gas: setting.gas } : {}),
+      technique: setting.technique || "Community submitted",
+      rating: 5,
+      votes: setting.usedCount || 1
+    }
+  })
+
+  res.json(base)
+})
+
+app.delete("/api/settings/:id", authenticateToken, (req, res) => {
+  const user = req.userRecord || findUserFromToken(req.user)
+  if (!user) return res.status(404).json({ error: "User not found" })
+
+  const settingId = Number(req.params.id)
+  const index = savedSettings.findIndex(setting => setting.id === settingId)
+  if (index === -1) return res.status(404).json({ error: "Setting not found" })
+
+  const setting = savedSettings[index]
+  if (!sameUserId(setting.userId, req.user.id) && !user.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" })
+  }
+
+  savedSettings.splice(index, 1)
+  users.forEach(candidate => {
+    if (Array.isArray(candidate.savedSettings)) {
+      candidate.savedSettings = candidate.savedSettings.filter(id => !sameUserId(id, settingId))
+    }
+  })
+  saveData()
+
+  res.json({ success: true })
+})
+
+app.post("/api/settings/:id/used", (req, res) => {
+  const settingId = Number(req.params.id)
+  const setting = savedSettings.find(item => item.id === settingId)
+  if (!setting) return res.status(404).json({ error: "Setting not found" })
+
+  setting.usedCount = (setting.usedCount || 0) + 1
+  saveData()
+  res.json({ success: true, usedCount: setting.usedCount })
 })
 
 app.get("/api/gallery", (req, res) => {
