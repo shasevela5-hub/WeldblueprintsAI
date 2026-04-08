@@ -795,7 +795,7 @@
     if (!user.isPro && token) {
       if (!PAYPAL_CLIENT_ID || PAYPAL_CLIENT_ID === "YOUR_PAYPAL_CLIENT_ID") {
         paypalFallback.style.display = "block"
-        paypalFallback.textContent = "Set your PayPal client ID in pricing.html meta tag before enabling checkout."
+        paypalFallback.textContent = "Set PAYPAL_CLIENT_ID on the server before enabling checkout."
       } else {
         loadPayPalSdk(PAYPAL_CLIENT_ID).then(() => {
           paypal.Buttons({

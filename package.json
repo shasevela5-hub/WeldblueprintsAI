@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "test": "echo \"No automated tests configured yet\""
+    "smoke": "node scripts/smoke-test.js",
+    "test": "npm run smoke"
   },
   "keywords": [],
   "author": "",

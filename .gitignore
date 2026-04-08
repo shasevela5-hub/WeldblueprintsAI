@@ -8,6 +8,9 @@ node_modules/
 
 # runtime data / logs
 data.json
+analytics.json
+backups/
+sessions/
 *.log
 npm-debug.log*
 

@@ -11,6 +11,7 @@ const FileStoreFactory = require("session-file-store")
 const PDFDocument = require("pdfkit")
 
 const app = express()
+app.disable("x-powered-by")
 
 const PORT = Number(process.env.PORT || 3000)
 const NODE_ENV = process.env.NODE_ENV || "development"
@@ -29,10 +30,54 @@ const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@weldblueprints.ai"
 const PRO_PRICE_USD = "19.99"
 const FREE_GENERATION_LIMIT = Number(process.env.FREE_GENERATION_LIMIT || 3)
 
+function normalizeOrigin(origin) {
+  const raw = String(origin || "").trim()
+  if (!raw) return ""
+  try {
+    return new URL(raw).origin.toLowerCase()
+  } catch (_) {
+    return raw.replace(/\/+$/, "").toLowerCase()
+  }
+}
+
+function resolveStoragePath(envName, fallbackRelativePath) {
+  const configured = String(process.env[envName] || "").trim()
+  if (!configured) return path.resolve(__dirname, fallbackRelativePath)
+  return path.resolve(configured)
+}
+
+const dataFile = resolveStoragePath("DATA_FILE", "data.json")
+const backupDir = resolveStoragePath("BACKUP_DIR", "backups")
+const analyticsFile = resolveStoragePath("ANALYTICS_FILE", "analytics.json")
+const sessionDir = resolveStoragePath("SESSION_DIR", "sessions")
+
+const appOriginNormalized = normalizeOrigin(APP_ORIGIN)
+const allowedCorsOrigins = new Set([appOriginNormalized].filter(Boolean))
+
+if (IS_PROD) {
+  app.set("trust proxy", 1)
+}
+
 app.use(cors({
-  origin: APP_ORIGIN,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true)
+    const normalized = normalizeOrigin(origin)
+    if (allowedCorsOrigins.has(normalized)) return callback(null, true)
+    return callback(null, false)
+  },
   credentials: true
 }))
+
+app.use((req, res, next) => {
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin")
+  res.setHeader("X-Content-Type-Options", "nosniff")
+  res.setHeader("X-Frame-Options", "SAMEORIGIN")
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+  if (IS_PROD && req.secure) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+  }
+  next()
+})
 
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true }))
@@ -62,8 +107,68 @@ app.get("/pricing.html", (req, res) => {
 app.get("/healthz", (req, res) => {
   res.json({ ok: true, env: NODE_ENV })
 })
-app.use(express.static(__dirname))
-const sessionDir = path.join(__dirname, "sessions")
+
+const blockedStaticExactPaths = new Set([
+  "/data.json",
+  "/analytics.json",
+  "/server.js",
+  "/package.json",
+  "/package-lock.json",
+  "/.env",
+  "/.gitignore",
+  "/readme.md"
+])
+const blockedStaticPrefixes = ["/backups/", "/sessions/", "/.git/"]
+const allowedStaticExtensions = new Set([
+  ".html", ".css", ".js", ".mjs", ".svg", ".png", ".jpg", ".jpeg",
+  ".gif", ".webp", ".ico", ".woff", ".woff2", ".ttf", ".eot",
+  ".map", ".webmanifest", ".txt", ".xml"
+])
+
+function normalizeRequestPath(requestPath) {
+  try {
+    const decoded = decodeURIComponent(String(requestPath || "/"))
+    const normalized = path.posix.normalize(decoded.startsWith("/") ? decoded : `/${decoded}`)
+    return normalized.startsWith("/") ? normalized : `/${normalized}`
+  } catch (_) {
+    return null
+  }
+}
+
+function isBlockedStaticPath(requestPath) {
+  const normalized = normalizeRequestPath(requestPath)
+  if (!normalized) return true
+  const lower = normalized.toLowerCase()
+  if (lower.includes("..")) return true
+  if (blockedStaticExactPaths.has(lower)) return true
+  if (blockedStaticPrefixes.some(prefix => lower.startsWith(prefix))) return true
+  const ext = path.posix.extname(lower)
+  if (ext && !allowedStaticExtensions.has(ext)) return true
+  return false
+}
+
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next()
+  if (
+    req.path.startsWith("/api/") ||
+    req.path === "/generate-blueprint" ||
+    req.path === "/health" ||
+    req.path === "/healthz"
+  ) {
+    return next()
+  }
+  if (isBlockedStaticPath(req.path)) {
+    return res.status(404).send("Not found")
+  }
+  next()
+})
+
+app.use(express.static(__dirname, {
+  dotfiles: "ignore",
+  index: false,
+  fallthrough: true
+}))
+
 function buildSessionStore() {
   if (SESSION_STORE === "file") {
     if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true })
@@ -186,9 +291,37 @@ function requireEnvForProd() {
   }
 }
 
-const dataFile = path.join(__dirname, "data.json")
-const backupDir = path.join(__dirname, "backups")
-const analyticsFile = path.join(__dirname, "analytics.json")
+function warnIfRiskyConfig() {
+  const warnings = []
+
+  if (!appOriginNormalized) {
+    warnings.push("APP_ORIGIN is not a valid absolute URL. CORS may reject browser requests.")
+  }
+  if (JWT_SECRET === "dev-jwt-secret-change-me") {
+    warnings.push("JWT_SECRET is using the development default.")
+  }
+  if (SESSION_SECRET === "dev-session-secret-change-me") {
+    warnings.push("SESSION_SECRET is using the development default.")
+  }
+  if (ADMIN_PASSWORD === "ChangeThisAdminPassword123!") {
+    warnings.push("ADMIN_PASSWORD is still the default value.")
+  }
+  if (IS_PROD && APP_ORIGIN.startsWith("http://")) {
+    warnings.push("APP_ORIGIN uses http:// in production. Use https:// with your final domain.")
+  }
+  if (IS_PROD && /sandbox/i.test(PAYPAL_BASE_URL)) {
+    warnings.push("PAYPAL_BASE_URL points to PayPal sandbox while NODE_ENV=production.")
+  }
+
+  warnings.forEach(message => {
+    console.warn(`[startup warning] ${message}`)
+  })
+}
+
+function ensureParentDir(filePath) {
+  const dir = path.dirname(filePath)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+}
 
 let users = []
 let savedProjects = []
@@ -208,9 +341,9 @@ function loadData() {
     users = Array.isArray(data.users) ? data.users : []
     savedProjects = Array.isArray(data.savedProjects) ? data.savedProjects : []
     savedSettings = Array.isArray(data.savedSettings) ? data.savedSettings : []
-    console.log("Loaded data.json")
+    console.log(`Loaded ${path.basename(dataFile)}`)
   } catch (err) {
-    console.error("Failed to load data.json:", err.message)
+    console.error(`Failed to load ${path.basename(dataFile)}:`, err.message)
   }
 }
 
@@ -265,15 +398,16 @@ function loadAnalytics() {
       daily: parsed.daily && typeof parsed.daily === "object" ? parsed.daily : {}
     }
   } catch (err) {
-    console.error("Failed to load analytics.json:", err.message)
+    console.error(`Failed to load ${path.basename(analyticsFile)}:`, err.message)
   }
 }
 
 function saveAnalytics() {
   try {
+    ensureParentDir(analyticsFile)
     fs.writeFileSync(analyticsFile, JSON.stringify(analytics, null, 2), "utf8")
   } catch (err) {
-    console.error("Failed to save analytics.json:", err.message)
+    console.error(`Failed to save ${path.basename(analyticsFile)}:`, err.message)
   }
 }
 
@@ -289,6 +423,7 @@ function trackEvent(eventName) {
 
 function saveData(reason = "save") {
   const payload = { users, savedProjects, savedSettings }
+  ensureParentDir(dataFile)
   fs.writeFileSync(dataFile, JSON.stringify(payload, null, 2), "utf8")
   const now = Date.now()
   if (reason === "critical" || now - lastAutosaveBackupAt > 15 * 60 * 1000) {
@@ -2690,6 +2825,7 @@ app.get("/api/admin/export/analytics", requireAdmin, (req, res) => {
 })
 
 requireEnvForProd()
+warnIfRiskyConfig()
 loadData()
 loadAnalytics()
 createDataBackup("startup")

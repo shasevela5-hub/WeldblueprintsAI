@@ -2,18 +2,28 @@
 
 WeldBlueprints AI is an Express app that generates fabrication-ready PDF blueprints, manages user accounts, and supports paid upgrades through PayPal.
 
-## Run locally
+## Quick start
 
-1. Install dependencies with `npm install`.
-2. Update `.env` with local or production-ready values.
-3. Start the server with `npm start`.
-4. Open `http://localhost:3000`.
+1. Install dependencies: `npm install`
+2. Copy env template: `cp .env.example .env` (or create `.env` manually on Windows)
+3. Update `.env` values for your environment
+4. Start the app: `npm start`
+5. Open `http://localhost:3000`
 
-## Required production environment variables
+## Scripts
+
+- `npm start` - run the production server
+- `npm run dev` - run server locally
+- `npm run smoke` - launch smoke tests (isolated temp data paths)
+- `npm test` - alias for smoke tests
+
+## Environment variables
+
+### Required for production
 
 - `NODE_ENV=production`
 - `PORT`
-- `APP_ORIGIN`
+- `APP_ORIGIN` (final `https://...` URL)
 - `JWT_SECRET`
 - `SESSION_SECRET`
 - `ADMIN_EMAIL`
@@ -21,23 +31,32 @@ WeldBlueprints AI is an Express app that generates fabrication-ready PDF bluepri
 - `PAYPAL_CLIENT_ID`
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_BASE_URL=https://api-m.paypal.com`
-- `FREE_GENERATION_LIMIT=3`
 
-## Production checklist
+### Runtime storage paths (optional, recommended)
 
-1. Point your domain to the server and set `APP_ORIGIN` to the final `https://...` URL.
-2. Use long random values for `JWT_SECRET` and `SESSION_SECRET`.
-3. Replace the admin placeholders with your real admin credentials.
-4. Set your live PayPal client ID and secret.
-5. Run the app behind HTTPS with Nginx, Caddy, or another reverse proxy.
-6. Keep the `backups/` and `sessions/` directories writable by the app process.
-7. Confirm `https://your-domain/healthz` returns a healthy JSON response.
+- `DATA_FILE` (default: `./data.json`)
+- `ANALYTICS_FILE` (default: `./analytics.json`)
+- `BACKUP_DIR` (default: `./backups`)
+- `SESSION_DIR` (default: `./sessions`)
 
-## Deploy notes
+You can set these to absolute paths so production/staging/test runs do not share the same data files.
 
-- The pricing page now receives the PayPal client ID from the server, so it no longer relies on a hardcoded value in the HTML file.
-- User, project, and custom setting data is stored in `data.json`.
-- Session files are stored in `sessions/` when `SESSION_STORE=file`.
+## Launch checklist
+
+1. Configure DNS and set `APP_ORIGIN` to your final HTTPS domain.
+2. Set strong random values for `JWT_SECRET` and `SESSION_SECRET`.
+3. Replace default admin credentials.
+4. Set live PayPal credentials and production PayPal base URL.
+5. Run behind HTTPS reverse proxy (Nginx, Caddy, Cloudflare Tunnel, etc.).
+6. Ensure storage paths are writable by the app process.
+7. Run `npm test` and confirm smoke test passes.
+8. Confirm `https://your-domain/healthz` returns healthy JSON.
+
+## Security notes
+
+- Sensitive runtime files (`data.json`, analytics, backups, sessions, server source, env files) are blocked from public static access.
+- Security headers are applied for browser hardening.
+- In production, `trust proxy` is enabled for secure cookie behavior behind reverse proxies.
 
 ## Main pages
 
