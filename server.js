@@ -1123,6 +1123,10 @@ function defaultProjectData(project, L, W, H) {
 
   if (map[project]) return map[project]
 
+  const style = getProjectStyle(project)
+  const styleTemplate = buildStyleTemplate(project, style, L, W, H)
+  if (styleTemplate) return styleTemplate
+
   const category = blueprintGallery[project] && blueprintGallery[project].category
 
   const templates = {
@@ -1307,10 +1311,6 @@ function defaultProjectData(project, L, W, H) {
       steps: profile.steps
     }
   }
-
-  const style = getProjectStyle(project)
-  const styleTemplate = buildStyleTemplate(project, style, L, W, H)
-  if (styleTemplate) return styleTemplate
 
   return templates[category] || {
     material: "2x2 sq tube and 3/16 plate",
@@ -1940,6 +1940,7 @@ function drawBlueprint(doc, payload) {
   const { project, dimensions, welder, process, wire, wiresize, gas, thickness } = payload
   const { L, W, H } = dimensions
   const projectData = defaultProjectData(project, L, W, H)
+  const projectMeta = blueprintGallery[project] || {}
   const ws = getWeldSettings(thickness, process)
   const PW = 1190
   const PH = 842
@@ -2157,7 +2158,15 @@ function drawBlueprint(doc, payload) {
 
   doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("BUILD NOTES", partBox.x + 8, partBox.y + 226)
   doc.font("Helvetica").fontSize(8.5)
-  projectData.steps.slice(0, 3).forEach((s, i) => {
+  const buildNotes = []
+  if (projectMeta.description) buildNotes.push(`Project focus: ${projectMeta.description}`)
+  if (projectMeta.difficulty || projectMeta.time) {
+    const difficulty = projectMeta.difficulty || "General"
+    const time = projectMeta.time || "Varies"
+    buildNotes.push(`Difficulty/Time: ${difficulty} / ${time}`)
+  }
+  projectData.steps.forEach(step => buildNotes.push(step))
+  buildNotes.slice(0, 3).forEach((s, i) => {
     doc.text(`${i + 1}. ${s}`, partBox.x + 8, partBox.y + 240 + i * 11, { width: partBox.w - 16 })
   })
 
@@ -2165,11 +2174,13 @@ function drawBlueprint(doc, payload) {
   doc.moveTo(titleBox.x + 6, titleBox.y + 24).lineTo(titleBox.x + titleBox.w - 6, titleBox.y + 24).strokeColor(C.thin).lineWidth(0.8).stroke()
   const tb = [
     ["PROJECT", project],
+    ["CATEGORY", projectMeta.category || "General"],
     ["DRAWING", `${project.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-assy`],
     ["SIZE", `${L} x ${W} x ${H} in`],
     ["WELDER", welder],
-    ["PROCESS", `${process} / ${wire} ${wiresize}`],
-    ["GAS", gas],
+    ["PROCESS", `${process} / ${wire} ${wiresize} / ${gas}`],
+    ["MATERIAL", projectData.material],
+    ["DIFF / TIME", `${projectMeta.difficulty || "General"} / ${projectMeta.time || "Varies"}`],
     ["THICKNESS", thickness],
     ["DATE", new Date().toLocaleDateString()],
     ["WELD SET", `${ws.volts}V  ${ws.wfs}  ${ws.amps}`]
