@@ -699,7 +699,365 @@ function analyzeScrap(scrapList) {
   return suggestions.slice(0, 4)
 }
 
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, Number(value)))
+}
+
+function seedFromString(input) {
+  let hash = 2166136261
+  const text = String(input || "")
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function itemCodeFromIndex(index) {
+  let value = Number(index) + 1
+  let code = ""
+  while (value > 0) {
+    value -= 1
+    code = String.fromCharCode(65 + (value % 26)) + code
+    value = Math.floor(value / 26)
+  }
+  return code || "A"
+}
+
+function uniqueStrings(values, limit = Infinity) {
+  const out = []
+  const seen = new Set()
+  values.forEach(value => {
+    const clean = sanitizeText(value, 140)
+    if (!clean) return
+    const key = clean.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(clean)
+  })
+  return out.slice(0, limit)
+}
+
+function buildProjectDetailProfile(project, style, L, W, H) {
+  const lower = String(project || "").toLowerCase()
+  const seed = seedFromString(`${project}|${style}|${L}|${W}|${H}`)
+  const visual = {
+    frontDivisions: clampNumber(2 + (seed % 3), 2, 5),
+    sideDivisions: clampNumber(2 + ((seed >> 2) % 3), 2, 5),
+    topGridCols: clampNumber(2 + ((seed >> 4) % 4), 2, 6),
+    topGridRows: clampNumber(2 + ((seed >> 7) % 3), 2, 5),
+    bracePattern: ["X", "V", "K", "none"][(seed >> 10) % 4],
+    shelfBands: clampNumber((seed >> 12) % 3, 0, 3),
+    centerOpening: false,
+    archTop: false,
+    wheelCount: 0,
+    isoStruts: clampNumber(2 + ((seed >> 14) % 3), 2, 5)
+  }
+
+  const styleDefaults = {
+    cart: { bracePattern: "X", shelfBands: 2, wheelCount: 4, topGridCols: 3, topGridRows: 2 },
+    shelf: { bracePattern: "X", shelfBands: 2, topGridCols: 3, topGridRows: 3 },
+    rack: { bracePattern: "K", shelfBands: 2, topGridCols: 4, topGridRows: 2 },
+    trailer: { bracePattern: "X", wheelCount: 2, shelfBands: 1, topGridCols: 5, topGridRows: 2 },
+    flatbed: { bracePattern: "X", wheelCount: 2, shelfBands: 1, topGridCols: 5, topGridRows: 2 },
+    skid: { bracePattern: "K", shelfBands: 1, topGridCols: 4, topGridRows: 2 },
+    hoist: { bracePattern: "V", wheelCount: 2, shelfBands: 0, topGridCols: 2, topGridRows: 2 },
+    cage: { bracePattern: "X", archTop: true, shelfBands: 1, topGridCols: 3, topGridRows: 2 },
+    lift: { bracePattern: "X", wheelCount: 2, shelfBands: 0, topGridCols: 3, topGridRows: 2 },
+    gate: { bracePattern: "K", centerOpening: true, shelfBands: 0, topGridCols: 2, topGridRows: 2 },
+    pit: { bracePattern: "none", shelfBands: 0, topGridCols: 3, topGridRows: 3 },
+    greenhouse: { bracePattern: "K", archTop: true, shelfBands: 1, topGridCols: 4, topGridRows: 3 },
+    pergola: { bracePattern: "V", shelfBands: 1, topGridCols: 4, topGridRows: 3 },
+    carport: { bracePattern: "V", shelfBands: 1, topGridCols: 4, topGridRows: 3 },
+    planter: { bracePattern: "none", centerOpening: true, shelfBands: 0, topGridCols: 3, topGridRows: 3 },
+    furniture: { bracePattern: "K", shelfBands: 1, topGridCols: 3, topGridRows: 2 },
+    decor: { bracePattern: "V", shelfBands: 0, topGridCols: 3, topGridRows: 3 },
+    struct: { bracePattern: "K", shelfBands: 1, topGridCols: 4, topGridRows: 3 },
+    frame: { bracePattern: "X", shelfBands: 1, topGridCols: 3, topGridRows: 2 }
+  }
+  if (styleDefaults[style]) {
+    Object.assign(visual, styleDefaults[style])
+  }
+
+  const callouts = []
+  const extraParts = []
+  const extraSteps = []
+  const materialHints = []
+  const tags = []
+
+  function addFeature(feature) {
+    if (!feature) return
+    if (feature.callout) callouts.push(feature.callout)
+    if (feature.part) extraParts.push(feature.part)
+    if (feature.step) extraSteps.push(feature.step)
+    if (feature.materialHint) materialHints.push(feature.materialHint)
+    if (feature.tag) tags.push(feature.tag)
+  }
+
+  if (lower.includes("drill")) {
+    addFeature({
+      callout: "Column centerline and base bolt pattern",
+      part: { name: "Column mount plate", qty: 1, length: `${Math.max(10, Math.round(W * 0.7))}x${Math.max(10, Math.round(W * 0.7))}in`, material: "3/8 plate" },
+      step: "Layout spindle centerline and bolt pattern before final welding.",
+      materialHint: "column mount reinforcement",
+      tag: "precision mounting"
+    })
+    visual.centerOpening = true
+    visual.bracePattern = "K"
+  }
+  if (lower.includes("saw")) {
+    addFeature({
+      callout: "Blade travel clearance and work stop alignment",
+      part: { name: "Tool deck plate", qty: 1, length: `${Math.max(14, Math.round(L * 0.45))}x${Math.max(10, Math.round(W * 0.5))}in`, material: "3/16 plate" },
+      step: "Dry fit tool body and verify full blade travel before final welds.",
+      materialHint: "tool deck reinforcement",
+      tag: "tool envelope control"
+    })
+    visual.topGridRows = clampNumber(visual.topGridRows + 1, 2, 5)
+  }
+  if (lower.includes("grinder")) {
+    addFeature({
+      callout: "Spark guard and tool rest anchor points",
+      part: { name: "Spark guard plate", qty: 1, length: "10x8in", material: "1/8 plate" },
+      step: "Install spark guard tabs with operator clearance maintained.",
+      materialHint: "spark shield plate",
+      tag: "operator safety"
+    })
+    visual.bracePattern = "V"
+  }
+  if (lower.includes("bender")) {
+    addFeature({
+      callout: "Reaction arm and die mount centerline",
+      part: { name: "Die mount doubler", qty: 1, length: "8x8in", material: "3/8 plate" },
+      step: "Align die centerline to reaction arm before welding doublers.",
+      materialHint: "die mount doubler",
+      tag: "high load mounting"
+    })
+    visual.bracePattern = "K"
+  }
+  if (lower.includes("cart") || lower.includes("stool")) {
+    addFeature({
+      callout: "Caster spacing and center of gravity check",
+      part: { name: "Caster cross brace", qty: 2, length: `${Math.max(10, Math.round(W * 0.8))}in`, material: "1x1 sq tube" },
+      step: "Place casters to keep center of gravity inside wheel footprint.",
+      materialHint: "caster gussets",
+      tag: "mobility tuned"
+    })
+    visual.wheelCount = 4
+  }
+  if (lower.includes("trailer") || lower.includes("flatbed") || lower.includes("hitch")) {
+    addFeature({
+      callout: "Tongue datum and axle centerline control",
+      part: { name: "Tongue gusset", qty: 2, length: "10in", material: "1/4 plate" },
+      step: "Verify tongue centerline to axle offset before welding mounts.",
+      materialHint: "tongue and axle gussets",
+      tag: "road alignment"
+    })
+    visual.wheelCount = 2
+    visual.topGridCols = clampNumber(visual.topGridCols + 1, 3, 6)
+  }
+  if (lower.includes("rack")) {
+    addFeature({
+      callout: "Load stop tabs and tie-down access",
+      part: { name: "Tie-down tab", qty: 4, length: "3in", material: "1/4 plate" },
+      step: "Add tie-down tabs at balanced load points on each side.",
+      materialHint: "tie-down tabs",
+      tag: "cargo retention"
+    })
+    visual.shelfBands = clampNumber(visual.shelfBands + 1, 1, 3)
+  }
+  if (lower.includes("gate") || lower.includes("door") || lower.includes("panel")) {
+    addFeature({
+      callout: "Latch-side reveal and hinge axis",
+      part: { name: "Hinge backing plate", qty: 2, length: "6x3in", material: "3/16 plate" },
+      step: "Set hinge axis straight and keep latch-side reveal uniform.",
+      materialHint: "hinge reinforcement",
+      tag: "swing fitment"
+    })
+    visual.centerOpening = true
+  }
+  if (lower.includes("fire") || lower.includes("grill") || lower.includes("smoker")) {
+    addFeature({
+      callout: "Heat zone separation and air control points",
+      part: { name: "Air intake slider", qty: 2, length: "4x2in", material: "1/8 plate" },
+      step: "Sequence welds to limit heat distortion around firebox seams.",
+      materialHint: "high-temp plate details",
+      tag: "thermal control"
+    })
+  }
+  if (lower.includes("bench") || lower.includes("table") || lower.includes("desk")) {
+    addFeature({
+      callout: "Top mount tabs and anti-racking braces",
+      part: { name: "Top mount tab", qty: 6, length: "2in", material: "3/16 plate" },
+      step: "Install anti-racking braces before final top-tab welding.",
+      materialHint: "top mounting tabs",
+      tag: "surface alignment"
+    })
+    visual.bracePattern = visual.bracePattern === "none" ? "K" : visual.bracePattern
+  }
+  if (lower.includes("shelf") || lower.includes("cabinet") || lower.includes("bookshelf")) {
+    addFeature({
+      callout: "Shelf pitch and torsional bracing",
+      part: { name: "Shelf support angle", qty: 4, length: `${Math.max(10, Math.round(W * 0.65))}in`, material: "1x1 angle" },
+      step: "Hold shelf pitch consistent from base to top before weld-out.",
+      materialHint: "shelf support angles",
+      tag: "storage capacity"
+    })
+    visual.shelfBands = clampNumber(Math.max(2, visual.shelfBands), 1, 4)
+  }
+  if (lower.includes("hoist") || lower.includes("crane") || lower.includes("stand")) {
+    addFeature({
+      callout: "Load path from boom/mount into base",
+      part: { name: "Load path gusset", qty: 2, length: "8in", material: "3/8 plate" },
+      step: "Keep gusset orientation aligned with expected load path.",
+      materialHint: "load path gussets",
+      tag: "lift safety"
+    })
+  }
+  if (lower.includes("cage")) {
+    addFeature({
+      callout: "Node triangulation and occupant clearance",
+      part: { name: "Node gusset", qty: 8, length: "4in", material: "3/16 plate" },
+      step: "Check occupant clearance envelope before closing node welds.",
+      materialHint: "tube node gussets",
+      tag: "impact structure"
+    })
+    visual.archTop = true
+    visual.bracePattern = "X"
+  }
+  if (lower.includes("bed")) {
+    addFeature({
+      callout: "Mattress/deck support spacing and wall clearance",
+      part: { name: "Deck support rail", qty: 3, length: `${Math.max(16, Math.round(W * 0.85))}in`, material: "1.5x1.5 sq tube" },
+      step: "Verify deck support spacing matches panel or slat layout.",
+      materialHint: "deck support rails",
+      tag: "fit and comfort"
+    })
+  }
+  if (lower.includes("planter") || lower.includes("garden") || lower.includes("mailbox")) {
+    addFeature({
+      callout: "Drainage and weather-exposed edge protection",
+      part: { name: "Drain relief tab", qty: 4, length: "2in", material: "1/8 plate" },
+      step: "Deburr drain and weather edges to prevent coating failure.",
+      materialHint: "outdoor drain features",
+      tag: "outdoor durability"
+    })
+  }
+  if (lower.includes("sign") || lower.includes("art") || lower.includes("sculpture") || lower.includes("monogram")) {
+    addFeature({
+      callout: "Visual centerline and mount standoff balance",
+      part: { name: "Hidden standoff tab", qty: 4, length: "2in", material: "3/16 plate" },
+      step: "Balance standoff points to prevent wall twist after install.",
+      materialHint: "display mounting tabs",
+      tag: "visual balance"
+    })
+    visual.topGridRows = clampNumber(visual.topGridRows + 1, 2, 5)
+  }
+
+  if (!extraParts.length) {
+    addFeature({
+      callout: "Primary datum and assembly sequence marks",
+      part: { name: "Fixture tab", qty: 4, length: "2in", material: "1/8 plate" },
+      step: "Mark primary datum lines and keep fixtures in place through weld-out.",
+      materialHint: "fixture tabs",
+      tag: `${style} profile`
+    })
+  }
+
+  const styleSummary = {
+    cart: "mobile frame",
+    shelf: "multi-level support",
+    rack: "cargo rack geometry",
+    trailer: "road-going frame",
+    flatbed: "deck-frame load path",
+    skid: "quick-attach interface",
+    hoist: "lift structure",
+    cage: "protective hoop geometry",
+    lift: "pivoting lift linkage",
+    gate: "swinging panel fitment",
+    pit: "heat chamber form",
+    greenhouse: "arched enclosure",
+    pergola: "open-beam canopy",
+    carport: "bay frame layout",
+    planter: "drainage body",
+    furniture: "finish-grade frame",
+    decor: "display-focused profile",
+    struct: "structural bracing",
+    frame: "general fabrication frame"
+  }
+  if (styleSummary[style]) tags.unshift(styleSummary[style])
+
+  return {
+    visual,
+    callouts: uniqueStrings(callouts, 4),
+    extraParts: extraParts.slice(0, 2),
+    extraSteps: uniqueStrings(extraSteps, 3),
+    materialHints: uniqueStrings(materialHints, 2),
+    featureSummary: uniqueStrings(tags, 3).join(" | ")
+  }
+}
+
+function applyProjectDetailProfile(project, style, L, W, H, baseData) {
+  const profile = buildProjectDetailProfile(project, style, L, W, H)
+  const baseParts = Array.isArray(baseData.parts)
+    ? baseData.parts.map(row => [
+      String(row[0] || ""),
+      sanitizeText(row[1], 64),
+      row[2],
+      sanitizeText(row[3], 32),
+      sanitizeText(row[4], 40)
+    ])
+    : []
+
+  const extraParts = profile.extraParts.map(part => [
+    "",
+    sanitizeText(part.name, 64),
+    Math.max(1, Number(part.qty) || 1),
+    sanitizeText(part.length, 32),
+    sanitizeText(part.material, 40)
+  ])
+
+  const seenPartKeys = new Set()
+  const mergedParts = []
+  ;[...baseParts, ...extraParts].forEach(part => {
+    const key = `${part[1]}|${part[3]}|${part[4]}`.toLowerCase()
+    if (seenPartKeys.has(key)) return
+    seenPartKeys.add(key)
+    mergedParts.push(part)
+  })
+
+  const parts = mergedParts.slice(0, 8).map((part, index) => [
+    itemCodeFromIndex(index),
+    part[1] || "Part",
+    part[2] || 1,
+    part[3] || "varies",
+    part[4] || "steel"
+  ])
+
+  const stepValues = [
+    ...(Array.isArray(baseData.steps) ? baseData.steps : []),
+    ...profile.extraSteps
+  ]
+  const steps = uniqueStrings(stepValues, 8)
+
+  const materialValues = uniqueStrings([
+    baseData.material,
+    ...profile.materialHints
+  ], 2)
+  const material = materialValues.join(" + ") || "2x2 sq tube and plate"
+
+  return {
+    material,
+    parts,
+    steps,
+    callouts: profile.callouts,
+    featureSummary: profile.featureSummary,
+    visual: profile.visual
+  }
+}
+
 function defaultProjectData(project, L, W, H) {
+  const style = getProjectStyle(project)
   const map = {
     "Welding Cart": {
       material: "1x1 sq tube and 3/16 plate",
@@ -1121,11 +1479,14 @@ function defaultProjectData(project, L, W, H) {
     }
   }
 
-  if (map[project]) return map[project]
+  if (map[project]) {
+    return applyProjectDetailProfile(project, style, L, W, H, map[project])
+  }
 
-  const style = getProjectStyle(project)
   const styleTemplate = buildStyleTemplate(project, style, L, W, H)
-  if (styleTemplate) return styleTemplate
+  if (styleTemplate) {
+    return applyProjectDetailProfile(project, style, L, W, H, styleTemplate)
+  }
 
   const category = blueprintGallery[project] && blueprintGallery[project].category
 
@@ -1298,7 +1659,7 @@ function defaultProjectData(project, L, W, H) {
   const lowerName = String(project || "").toLowerCase()
   const profile = keywordProfiles.find(entry => entry.match.some(word => lowerName.includes(word)))
   if (profile) {
-    return {
+    return applyProjectDetailProfile(project, style, L, W, H, {
       material: profile.material,
       parts: [
         ["A", profile.partName[0], 2, `${L}in`, "2x2 sq tube"],
@@ -1309,10 +1670,10 @@ function defaultProjectData(project, L, W, H) {
         ["F", profile.partName[5], 4, "4in", "3/16 plate"]
       ],
       steps: profile.steps
-    }
+    })
   }
 
-  return templates[category] || {
+  return applyProjectDetailProfile(project, style, L, W, H, templates[category] || {
     material: "2x2 sq tube and 3/16 plate",
     parts: [
       ["A", "Main rail", 2, `${L}in`, "2x2 sq tube"],
@@ -1330,7 +1691,7 @@ function defaultProjectData(project, L, W, H) {
       "Grind or dress the necessary joints.",
       "Prime, paint, or seal the finished project."
     ]
-  }
+  })
 }
 
 function buildStyleTemplate(project, style, L, W, H) {
@@ -1969,6 +2330,20 @@ function drawBlueprint(doc, payload) {
   const partBox = { x: 600, y: 390, w: 470, h: 250 }
   const titleBox = { x: 600, y: 655, w: 470, h: 150 }
   const style = getProjectStyle(project)
+  const visual = projectData.visual || {}
+  const visualProfile = {
+    frontDivisions: clampNumber(visual.frontDivisions || 3, 2, 6),
+    sideDivisions: clampNumber(visual.sideDivisions || 3, 2, 6),
+    topGridCols: clampNumber(visual.topGridCols || 3, 2, 6),
+    topGridRows: clampNumber(visual.topGridRows || 2, 2, 5),
+    bracePattern: ["X", "V", "K"].includes(String(visual.bracePattern || "").toUpperCase()) ? String(visual.bracePattern).toUpperCase() : "none",
+    shelfBands: clampNumber(visual.shelfBands || 0, 0, 4),
+    centerOpening: !!visual.centerOpening,
+    archTop: !!visual.archTop,
+    wheelCount: clampNumber(visual.wheelCount || 0, 0, 4),
+    isoStruts: clampNumber(visual.isoStruts || 2, 2, 5)
+  }
+  const featureCallouts = Array.isArray(projectData.callouts) ? projectData.callouts.slice(0, 3) : []
 
   ;[frontBox, sideBox, isoBox, topBox, partBox, titleBox].forEach(b => {
     doc.rect(b.x, b.y, b.w, b.h).strokeColor(C.thin).lineWidth(0.8).stroke()
@@ -2027,6 +2402,60 @@ function drawBlueprint(doc, payload) {
     doc.moveTo(fx + wPx * 0.15, fy - hPx * 0.55).lineTo(fx + wPx * 0.85, fy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
   }
 
+  let frontBodyTopY = fy - hPx
+  if (style === "cage") frontBodyTopY = fy - hPx * 0.88
+  if (style === "trailer" || style === "flatbed" || style === "rack" || style === "skid") frontBodyTopY = fy - hPx * 0.35
+  if (style === "hoist") frontBodyTopY = fy - hPx * 0.88
+  if (style === "lift") frontBodyTopY = fy - hPx * 0.72
+
+  for (let i = 1; i < visualProfile.frontDivisions; i += 1) {
+    const x = fx + (wPx / visualProfile.frontDivisions) * i
+    doc.moveTo(x, frontBodyTopY).lineTo(x, fy).strokeColor(C.grid).lineWidth(0.7).stroke()
+  }
+
+  for (let i = 1; i <= visualProfile.shelfBands; i += 1) {
+    const y = frontBodyTopY + ((fy - frontBodyTopY) / (visualProfile.shelfBands + 1)) * i
+    doc.moveTo(fx, y).lineTo(fx + wPx, y).strokeColor(C.grid).lineWidth(0.7).stroke()
+  }
+
+  if (visualProfile.bracePattern === "X") {
+    doc.moveTo(fx, frontBodyTopY).lineTo(fx + wPx, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(fx + wPx, frontBodyTopY).lineTo(fx, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+  } else if (visualProfile.bracePattern === "V") {
+    doc.moveTo(fx, frontBodyTopY).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(fx + wPx, frontBodyTopY).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+  } else if (visualProfile.bracePattern === "K") {
+    const midX = fx + wPx * 0.5
+    const midY = frontBodyTopY + (fy - frontBodyTopY) * 0.5
+    doc.moveTo(midX, frontBodyTopY).lineTo(midX, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(midX, midY).lineTo(fx, frontBodyTopY).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(midX, midY).lineTo(fx + wPx, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
+  }
+
+  if (visualProfile.centerOpening && wPx > 40 && (fy - frontBodyTopY) > 30) {
+    const openingW = wPx * 0.28
+    const openingH = (fy - frontBodyTopY) * 0.42
+    const openingX = fx + (wPx - openingW) / 2
+    const openingY = frontBodyTopY + (fy - frontBodyTopY) * 0.28
+    doc.rect(openingX, openingY, openingW, openingH).strokeColor(C.thin).lineWidth(0.9).stroke()
+  }
+
+  if (visualProfile.archTop && wPx > 40) {
+    const left = { x: fx + wPx * 0.1, y: frontBodyTopY + 4 }
+    const right = { x: fx + wPx * 0.9, y: frontBodyTopY + 4 }
+    const control = { x: fx + wPx * 0.5, y: frontBodyTopY - Math.max(8, hPx * 0.12) }
+    doc.moveTo(left.x, left.y)
+      .quadraticCurveTo(control.x, control.y, right.x, right.y)
+      .strokeColor(C.thin).lineWidth(0.9).stroke()
+  }
+
+  if (visualProfile.wheelCount >= 2 && style !== "trailer" && style !== "flatbed") {
+    const slots = visualProfile.wheelCount === 2 ? [0.25, 0.75] : [0.12, 0.38, 0.62, 0.88]
+    slots.slice(0, visualProfile.wheelCount).forEach(ratio => {
+      doc.circle(fx + wPx * ratio, fy + 10, 6).strokeColor(C.ink).lineWidth(1).stroke()
+    })
+  }
+
   const sx = sideBox.x + (sideBox.w - depthPx) / 2
   const sy = sideBox.y + sideBox.h - 40
   if (style === "cage") {
@@ -2054,6 +2483,22 @@ function drawBlueprint(doc, payload) {
     doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.55).lineTo(sx + depthPx * 0.8, sy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
   }
 
+  let sideBodyTopY = sy - hPx
+  if (style === "cage") sideBodyTopY = sy - hPx * 0.75
+  if (style === "trailer" || style === "flatbed" || style === "rack" || style === "skid") sideBodyTopY = sy - hPx * 0.35
+  if (style === "hoist") sideBodyTopY = sy - hPx * 0.85
+  if (style === "lift") sideBodyTopY = sy - hPx * 0.70
+
+  for (let i = 1; i < visualProfile.sideDivisions; i += 1) {
+    const x = sx + (depthPx / visualProfile.sideDivisions) * i
+    doc.moveTo(x, sideBodyTopY).lineTo(x, sy).strokeColor(C.grid).lineWidth(0.7).stroke()
+  }
+
+  if (visualProfile.bracePattern === "X" && depthPx > 20) {
+    doc.moveTo(sx, sideBodyTopY).lineTo(sx + depthPx, sy).strokeColor(C.thin).lineWidth(0.8).stroke()
+    doc.moveTo(sx + depthPx, sideBodyTopY).lineTo(sx, sy).strokeColor(C.thin).lineWidth(0.8).stroke()
+  }
+
   const tx = topBox.x + (topBox.w - wPx) / 2
   const ty = topBox.y + (topBox.h + depthPx) / 2
   doc.rect(tx, ty - depthPx, wPx, depthPx).strokeColor(C.ink).lineWidth(1.6).stroke()
@@ -2068,6 +2513,20 @@ function drawBlueprint(doc, payload) {
     doc.rect(tx + wPx - leg / 2, ty - depthPx - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
     doc.rect(tx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
     doc.rect(tx + wPx - leg / 2, ty - leg / 2, leg, leg).strokeColor(C.thin).lineWidth(1).stroke()
+  }
+
+  for (let i = 1; i < visualProfile.topGridCols; i += 1) {
+    const x = tx + (wPx / visualProfile.topGridCols) * i
+    doc.moveTo(x, ty - depthPx).lineTo(x, ty).strokeColor(C.grid).lineWidth(0.7).stroke()
+  }
+  for (let i = 1; i < visualProfile.topGridRows; i += 1) {
+    const y = ty - depthPx + (depthPx / visualProfile.topGridRows) * i
+    doc.moveTo(tx, y).lineTo(tx + wPx, y).strokeColor(C.grid).lineWidth(0.7).stroke()
+  }
+  if (visualProfile.centerOpening && wPx > 50 && depthPx > 40) {
+    const openW = wPx * 0.3
+    const openD = depthPx * 0.34
+    doc.rect(tx + (wPx - openW) / 2, ty - depthPx + (depthPx - openD) / 2, openW, openD).strokeColor(C.thin).lineWidth(0.9).stroke()
   }
 
   function ip(x, y, z, ox, oy, sxp = 0.9, syp = 0.45, szp = 1) {
@@ -2112,6 +2571,20 @@ function drawBlueprint(doc, payload) {
     ln(pA, pE); ln(pB, pF); ln(pC, pG); ln(pD, pH)
   }
 
+  for (let i = 1; i <= visualProfile.isoStruts; i += 1) {
+    const t = i / (visualProfile.isoStruts + 1)
+    const r1 = ip(L * t, 0, H * 0.2, iox, ioy, iScale, iScale * 0.5, iScale)
+    const r2 = ip(L * t, W, H * 0.2, iox, ioy, iScale, iScale * 0.5, iScale)
+    ln(r1, r2, 0.8, C.grid)
+  }
+
+  if (featureCallouts.length) {
+    doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(8).text("KEY FEATURES", frontBox.x + 8, frontBox.y + 8)
+    featureCallouts.forEach((line, i) => {
+      doc.fillColor(C.thin).font("Helvetica").fontSize(7.5).text(`${i + 1}. ${sanitizeText(line, 60)}`, frontBox.x + 8, frontBox.y + 18 + i * 9, { width: frontBox.w - 16 })
+    })
+  }
+
   function dimH(x1, x2, y, text) {
     doc.moveTo(x1, y).lineTo(x2, y).strokeColor(C.thin).lineWidth(0.9).stroke()
     doc.moveTo(x1, y - 5).lineTo(x1, y + 5).strokeColor(C.thin).lineWidth(0.9).stroke()
@@ -2144,7 +2617,7 @@ function drawBlueprint(doc, payload) {
   doc.text("MATERIAL", col[4], partBox.y + 26)
   doc.moveTo(partBox.x + 6, partBox.y + 40).lineTo(partBox.x + partBox.w - 6, partBox.y + 40).strokeColor(C.thin).lineWidth(0.8).stroke()
 
-  const rows = projectData.parts.slice(0, 8)
+  const rows = projectData.parts.slice(0, 7)
   rows.forEach((r, i) => {
     const yy = partBox.y + 46 + i * 22
     doc.font("Helvetica").fontSize(8.5).fillColor(C.ink)
@@ -2156,37 +2629,42 @@ function drawBlueprint(doc, payload) {
     doc.moveTo(partBox.x + 6, yy + 16).lineTo(partBox.x + partBox.w - 6, yy + 16).strokeColor(C.grid).lineWidth(0.6).stroke()
   })
 
-  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("BUILD NOTES", partBox.x + 8, partBox.y + 226)
+  const notesHeaderY = partBox.y + 202
+  const notesBodyY = notesHeaderY + 13
+  doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("BUILD NOTES", partBox.x + 8, notesHeaderY)
   doc.font("Helvetica").fontSize(8.5)
   const buildNotes = []
   if (projectMeta.description) buildNotes.push(`Project focus: ${projectMeta.description}`)
+  if (projectData.featureSummary) buildNotes.push(`Feature profile: ${projectData.featureSummary}`)
   if (projectMeta.difficulty || projectMeta.time) {
     const difficulty = projectMeta.difficulty || "General"
     const time = projectMeta.time || "Varies"
     buildNotes.push(`Difficulty/Time: ${difficulty} / ${time}`)
   }
   projectData.steps.forEach(step => buildNotes.push(step))
-  buildNotes.slice(0, 3).forEach((s, i) => {
-    doc.text(`${i + 1}. ${s}`, partBox.x + 8, partBox.y + 240 + i * 11, { width: partBox.w - 16 })
+  buildNotes.slice(0, 4).forEach((s, i) => {
+    doc.text(`${i + 1}. ${sanitizeText(s, 84)}`, partBox.x + 8, notesBodyY + i * 9, { width: partBox.w - 16 })
   })
 
   doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("TITLE BLOCK", titleBox.x + 8, titleBox.y + 8)
   doc.moveTo(titleBox.x + 6, titleBox.y + 24).lineTo(titleBox.x + titleBox.w - 6, titleBox.y + 24).strokeColor(C.thin).lineWidth(0.8).stroke()
+  const profileLine = `${projectMeta.category || "General"} / ${projectMeta.difficulty || "General"} / ${projectMeta.time || "Varies"}`
   const tb = [
     ["PROJECT", project],
-    ["CATEGORY", projectMeta.category || "General"],
+    ["PROFILE", profileLine],
     ["DRAWING", `${project.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-assy`],
     ["SIZE", `${L} x ${W} x ${H} in`],
     ["WELDER", welder],
     ["PROCESS", `${process} / ${wire} ${wiresize} / ${gas}`],
     ["MATERIAL", projectData.material],
-    ["DIFF / TIME", `${projectMeta.difficulty || "General"} / ${projectMeta.time || "Varies"}`],
+    ["FEATURES", projectData.featureSummary || style],
     ["THICKNESS", thickness],
     ["DATE", new Date().toLocaleDateString()],
     ["WELD SET", `${ws.volts}V  ${ws.wfs}  ${ws.amps}`]
   ]
+  const rowStep = tb.length > 10 ? 11 : 12
   tb.forEach((r, i) => {
-    const yy = titleBox.y + 30 + i * 12
+    const yy = titleBox.y + 30 + i * rowStep
     doc.font("Helvetica-Bold").fontSize(8).fillColor(C.thin).text(r[0], titleBox.x + 8, yy)
     doc.font("Helvetica").fontSize(8.5).fillColor(C.ink).text(String(r[1]), titleBox.x + 90, yy, { width: titleBox.w - 98 })
   })

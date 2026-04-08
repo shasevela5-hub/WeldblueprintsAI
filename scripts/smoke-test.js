@@ -2,6 +2,7 @@
 
 const assert = require("node:assert/strict")
 const { spawn } = require("node:child_process")
+const crypto = require("node:crypto")
 const { mkdtempSync, rmSync } = require("node:fs")
 const os = require("node:os")
 const path = require("node:path")
@@ -157,7 +158,48 @@ async function runSmokeSuite() {
   assert.equal(me.res.status, 200, "GET /api/auth/me should return 200 with valid token")
   assert.equal(me.json && me.json.user && me.json.user.email, "smoke@example.com")
 
-  const blueprintPayload = {
+  async function generateBlueprintHash(projectName) {
+    const blueprintPayload = {
+      project: projectName,
+      dimensions: "60x24x36",
+      welder: "Lincoln 210 MP",
+      process: "MIG",
+      wire: "ER70S-6",
+      wiresize: ".030",
+      gas: "C25",
+      thickness: "1/8",
+      notes: `Smoke test blueprint generation - ${projectName}`
+    }
+    const blueprint = await fetch(`${baseUrl}/generate-blueprint?preview=1`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(blueprintPayload)
+    })
+    assert.equal(blueprint.status, 200, `POST /generate-blueprint should return 200 for ${projectName}`)
+    assert.match(blueprint.headers.get("content-type") || "", /application\/pdf/i, `Blueprint response should be PDF for ${projectName}`)
+    const buffer = Buffer.from(await blueprint.arrayBuffer())
+    return crypto.createHash("sha256").update(buffer).digest("hex")
+  }
+
+  const weldingCartHash = await generateBlueprintHash("Welding Cart")
+  const bandSawStandHash = await generateBlueprintHash("Band Saw Stand")
+  const drillPressStandHash = await generateBlueprintHash("Drill Press Stand")
+
+  assert.notEqual(
+    bandSawStandHash,
+    drillPressStandHash,
+    "Different projects should produce distinct blueprint outputs."
+  )
+  assert.notEqual(
+    weldingCartHash,
+    bandSawStandHash,
+    "Different project families should produce distinct blueprint outputs."
+  )
+
+  const legacyBlueprintPayload = {
     project: "Welding Cart",
     dimensions: "36x20x38",
     welder: "Lincoln 210 MP",
@@ -174,7 +216,7 @@ async function runSmokeSuite() {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     },
-    body: JSON.stringify(blueprintPayload)
+    body: JSON.stringify(legacyBlueprintPayload)
   })
   assert.equal(blueprint.status, 200, "POST /generate-blueprint should return 200")
   assert.match(blueprint.headers.get("content-type") || "", /application\/pdf/i, "Blueprint response should be PDF")
