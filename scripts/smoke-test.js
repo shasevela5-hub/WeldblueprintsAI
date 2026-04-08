@@ -181,6 +181,13 @@ async function runSmokeSuite() {
     assert.equal(blueprint.status, 200, `POST /generate-blueprint should return 200 for ${projectName}`)
     assert.match(blueprint.headers.get("content-type") || "", /application\/pdf/i, `Blueprint response should be PDF for ${projectName}`)
     const buffer = Buffer.from(await blueprint.arrayBuffer())
+    const pdfText = buffer.toString("latin1")
+    const pageCountMatch = pdfText.match(/\/Count\s+(\d+)/)
+    const pageCount = pageCountMatch ? Number(pageCountMatch[1]) : 0
+    assert.ok(
+      Number.isFinite(pageCount) && pageCount >= 3,
+      `Blueprint should include multi-page output for ${projectName} (found ${pageCount}).`
+    )
     return crypto.createHash("sha256").update(buffer).digest("hex")
   }
 

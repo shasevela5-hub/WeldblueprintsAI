@@ -997,6 +997,83 @@ function buildProjectDetailProfile(project, style, L, W, H) {
   }
 }
 
+function parseLengthInches(value) {
+  const text = String(value || "").trim().toLowerCase()
+  const match = text.match(/^(\d+(?:\.\d+)?)\s*in$/)
+  if (!match) return null
+  return Number(match[1])
+}
+
+function buildDerivedPartsFromVisual(style, visualProfile, L, W, H) {
+  const derived = []
+  const braceLength = Math.max(10, Math.round(Math.hypot(L * 0.35, H * 0.35)))
+
+  if (visualProfile.frontDivisions > 2) {
+    derived.push({
+      name: "Front partition rib",
+      qty: visualProfile.frontDivisions - 1,
+      length: `${Math.max(10, Math.round(H * 0.7))}in`,
+      material: "1x1 sq tube"
+    })
+  }
+
+  if (visualProfile.topGridCols > 3) {
+    derived.push({
+      name: "Top grid crossmember",
+      qty: visualProfile.topGridCols - 1,
+      length: `${Math.max(10, Math.round(W * 0.9))}in`,
+      material: "1x1 sq tube"
+    })
+  }
+
+  if (visualProfile.shelfBands > 0) {
+    derived.push({
+      name: "Shelf support rail",
+      qty: visualProfile.shelfBands * 2,
+      length: `${Math.max(10, Math.round(L * 0.8))}in`,
+      material: "1x1 sq tube"
+    })
+  }
+
+  if (visualProfile.bracePattern !== "none") {
+    derived.push({
+      name: "Diagonal brace member",
+      qty: visualProfile.bracePattern === "X" ? 4 : 2,
+      length: `${braceLength}in`,
+      material: "1x1 sq tube"
+    })
+  }
+
+  if (visualProfile.wheelCount > 0 && style !== "trailer" && style !== "flatbed") {
+    derived.push({
+      name: "Wheel/caster mount plate",
+      qty: visualProfile.wheelCount,
+      length: "4x4in",
+      material: "3/16 plate"
+    })
+  }
+
+  if (visualProfile.centerOpening) {
+    derived.push({
+      name: "Opening trim frame",
+      qty: 2,
+      length: `${Math.max(8, Math.round(W * 0.45))}in`,
+      material: "1x1 angle"
+    })
+  }
+
+  if (visualProfile.archTop) {
+    derived.push({
+      name: "Arch cap segment",
+      qty: 1,
+      length: `${Math.max(12, Math.round(L * 0.55))}in`,
+      material: "1in round tube"
+    })
+  }
+
+  return derived.slice(0, 4)
+}
+
 function applyProjectDetailProfile(project, style, L, W, H, baseData) {
   const profile = buildProjectDetailProfile(project, style, L, W, H)
   const baseParts = Array.isArray(baseData.parts)
@@ -1016,17 +1093,24 @@ function applyProjectDetailProfile(project, style, L, W, H, baseData) {
     sanitizeText(part.length, 32),
     sanitizeText(part.material, 40)
   ])
+  const derivedParts = buildDerivedPartsFromVisual(style, profile.visual || {}, L, W, H).map(part => [
+    "",
+    sanitizeText(part.name, 64),
+    Math.max(1, Number(part.qty) || 1),
+    sanitizeText(part.length, 32),
+    sanitizeText(part.material, 40)
+  ])
 
   const seenPartKeys = new Set()
   const mergedParts = []
-  ;[...baseParts, ...extraParts].forEach(part => {
+  ;[...baseParts, ...extraParts, ...derivedParts].forEach(part => {
     const key = `${part[1]}|${part[3]}|${part[4]}`.toLowerCase()
     if (seenPartKeys.has(key)) return
     seenPartKeys.add(key)
     mergedParts.push(part)
   })
 
-  const parts = mergedParts.slice(0, 8).map((part, index) => [
+  const parts = mergedParts.slice(0, 14).map((part, index) => [
     itemCodeFromIndex(index),
     part[1] || "Part",
     part[2] || 1,
@@ -1038,7 +1122,7 @@ function applyProjectDetailProfile(project, style, L, W, H, baseData) {
     ...(Array.isArray(baseData.steps) ? baseData.steps : []),
     ...profile.extraSteps
   ]
-  const steps = uniqueStrings(stepValues, 8)
+  const steps = uniqueStrings(stepValues, 12)
 
   const materialValues = uniqueStrings([
     baseData.material,
@@ -2297,6 +2381,407 @@ function getProjectStyle(project) {
   return "frame"
 }
 
+function drawBlueprintPageShell(doc, palette, title, subtitle, pageLabel) {
+  const PW = 1190
+  const PH = 842
+  const margin = 24
+
+  doc.addPage({
+    size: [PW, PH],
+    margins: { top: 0, bottom: 0, left: 0, right: 0 }
+  })
+
+  doc.rect(0, 0, PW, PH).fill(palette.paper)
+  for (let x = 0; x <= PW; x += 40) doc.moveTo(x, 0).lineTo(x, PH).strokeColor(palette.grid).lineWidth(0.5).stroke()
+  for (let y = 0; y <= PH; y += 40) doc.moveTo(0, y).lineTo(PW, y).strokeColor(palette.grid).lineWidth(0.5).stroke()
+
+  doc.rect(margin, margin, PW - margin * 2, PH - margin * 2).strokeColor(palette.ink).lineWidth(1.2).stroke()
+  doc.rect(margin + 10, margin + 10, PW - (margin + 10) * 2, PH - (margin + 10) * 2).strokeColor(palette.thin).lineWidth(0.8).stroke()
+
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(22).text(title, margin + 18, margin + 16, { width: 760 })
+  doc.fillColor(palette.thin).font("Helvetica").fontSize(10).text(subtitle, margin + 18, margin + 44, { width: 760 })
+  if (pageLabel) {
+    doc.fillColor(palette.thin).font("Helvetica-Bold").fontSize(10).text(pageLabel, PW - margin - 180, margin + 24, { width: 160, align: "right" })
+  }
+
+  return { PW, PH, margin }
+}
+
+function summarizeMaterialTakeoff(parts) {
+  const totals = {
+    tubeInches: 0,
+    rodInches: 0,
+    platePieces: 0,
+    hardwarePieces: 0
+  }
+
+  parts.forEach(part => {
+    const qty = Math.max(1, Number(part.qty || part[2]) || 1)
+    const material = String(part.material || part[4] || "").toLowerCase()
+    const lengthText = String(part.length || part[3] || "")
+    const linearIn = parseLengthInches(lengthText)
+
+    if (linearIn && /(tube|pipe)/.test(material)) totals.tubeInches += linearIn * qty
+    if (linearIn && /(rod|bar)/.test(material)) totals.rodInches += linearIn * qty
+    if (/(plate|sheet)/.test(material)) totals.platePieces += qty
+    if (/hinge|latch|bolt|pin|caster|wheel/.test(material)) totals.hardwarePieces += qty
+  })
+
+  return {
+    tubeFeet: (totals.tubeInches / 12).toFixed(1),
+    rodFeet: (totals.rodInches / 12).toFixed(1),
+    platePieces: totals.platePieces,
+    hardwarePieces: totals.hardwarePieces
+  }
+}
+
+function buildWeldScheduleRows(style, process, thickness) {
+  const byStyle = {
+    trailer: [
+      "Main rail to crossmember",
+      "Tongue to main rail node",
+      "Axle mount reinforcement",
+      "Perimeter rail corners",
+      "Stake/tie-down tab attach",
+      "Deck support seam"
+    ],
+    flatbed: [
+      "Main rail to crossmember",
+      "Headache rack uprights",
+      "Perimeter rail corners",
+      "Mount plate to frame",
+      "Deck support seam",
+      "Rear support node"
+    ],
+    cage: [
+      "Main hoop base node",
+      "Front hoop node",
+      "Roof tube intersections",
+      "Side intrusion bars",
+      "Node gusset plates",
+      "Mount plate nodes"
+    ],
+    hoist: [
+      "Base beam corner joints",
+      "Mast to base node",
+      "Boom arm connection",
+      "Gusset to mast seams",
+      "Caster/foot mounts",
+      "Load hook plate"
+    ],
+    rack: [
+      "Upright to base rail",
+      "Cross rail joints",
+      "Stanchion mounts",
+      "Tie-down tab joints",
+      "Stop tab details",
+      "Mount insert seams"
+    ],
+    shelf: [
+      "Leg to frame corner",
+      "Shelf rail to uprights",
+      "Brace intersections",
+      "Top plate or tab seams",
+      "Foot plate joints",
+      "Accessory mount tabs"
+    ]
+  }
+
+  const locations = byStyle[style] || [
+    "Primary frame corners",
+    "Crossmember intersections",
+    "Upright support joints",
+    "Diagonal brace nodes",
+    "Mount tab details",
+    "Final assembly seams"
+  ]
+
+  const typeCycle = ["Fillet", "Fillet", "Fillet", "Groove", "Plug", "Stitch"]
+  const symbolCycle = ["FIL", "FIL", "FIL", "GRV", "PLG", "STC"]
+  const sizeByThickness = {
+    "1/8": "3/16 in",
+    "3/16": "1/4 in",
+    "1/4": "1/4 in",
+    "1/2": "5/16 in"
+  }
+  const defaultSize = sizeByThickness[thickness] || "1/4 in"
+
+  return locations.map((location, index) => ({
+    id: `J${index + 1}`,
+    location,
+    type: typeCycle[index % typeCycle.length],
+    symbol: symbolCycle[index % symbolCycle.length],
+    size: defaultSize,
+    process: process
+  }))
+}
+
+function buildToleranceRows(L, W, H) {
+  const largest = Math.max(L, W, H)
+  const linearTol = largest > 120 ? "+/- 1/8 in" : "+/- 1/16 in"
+  const mediumTol = largest > 120 ? "+/- 3/32 in" : "+/- 1/16 in"
+
+  return [
+    ["Overall length", `${L} in`, linearTol, "Tape from datum A"],
+    ["Overall width", `${W} in`, linearTol, "Tape from datum B"],
+    ["Overall height", `${H} in`, mediumTol, "Height gauge or square"],
+    ["Diagonal difference", "Target 0 in", "<= 1/8 in", "Cross-corner check"],
+    ["Hole/tab position", "Per drawing", "+/- 1/32 in", "Rule and center punch"],
+    ["Frame plumb", "Vertical", "<= 0.5 deg", "Digital angle finder"],
+    ["Surface flatness", "Top plane", "<= 1/16 in over 24 in", "Straight edge"],
+    ["Final fit-up gap", "Joint prep", "1/32 to 1/16 in", "Feelers before weld"]
+  ]
+}
+
+function drawFabricationPackagePage(doc, context) {
+  const { project, projectMeta, projectData, dimensions, style, process, thickness, palette } = context
+  const shell = drawBlueprintPageShell(
+    doc,
+    palette,
+    `${project.toUpperCase()} - FABRICATION PACKAGE`,
+    "Detailed cut list, operation sequence, and setup controls",
+    "PAGE 2 OF 3"
+  )
+
+  const left = { x: 56, y: 118, w: 760, h: 680 }
+  const right = { x: 836, y: 118, w: 300, h: 680 }
+  doc.rect(left.x, left.y, left.w, left.h).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.rect(right.x, right.y, right.w, right.h).strokeColor(palette.thin).lineWidth(0.8).stroke()
+
+  const normalizedParts = (projectData.parts || []).map((part, index) => ({
+    item: String(part[0] || itemCodeFromIndex(index)),
+    name: sanitizeText(part[1], 70) || "Part",
+    qty: Math.max(1, Number(part[2]) || 1),
+    length: sanitizeText(part[3], 32) || "varies",
+    material: sanitizeText(part[4], 40) || "steel"
+  }))
+
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("FULL CUT LIST", left.x + 8, left.y + 8)
+  const cols = [left.x + 8, left.x + 56, left.x + 384, left.x + 430, left.x + 512, left.x + 612]
+  doc.font("Helvetica-Bold").fontSize(9)
+  doc.text("ITEM", cols[0], left.y + 30)
+  doc.text("DESCRIPTION", cols[1], left.y + 30)
+  doc.text("QTY", cols[2], left.y + 30)
+  doc.text("LENGTH", cols[3], left.y + 30)
+  doc.text("MATERIAL", cols[4], left.y + 30)
+  doc.text("CUT NOTE", cols[5], left.y + 30)
+  doc.moveTo(left.x + 6, left.y + 44).lineTo(left.x + left.w - 6, left.y + 44).strokeColor(palette.thin).lineWidth(0.8).stroke()
+
+  const rowHeight = 22
+  const maxRows = 22
+  normalizedParts.slice(0, maxRows).forEach((part, rowIndex) => {
+    const y = left.y + 50 + rowIndex * rowHeight
+    const linearLength = parseLengthInches(part.length)
+    const cutNote = linearLength ? `${Math.round(linearLength / 2)}in ref stop` : "Template fit"
+    doc.font("Helvetica").fontSize(8.3).fillColor(palette.ink)
+    doc.text(part.item, cols[0], y)
+    doc.text(part.name, cols[1], y, { width: 320 })
+    doc.text(String(part.qty), cols[2], y)
+    doc.text(part.length, cols[3], y)
+    doc.text(part.material, cols[4], y, { width: 94 })
+    doc.text(cutNote, cols[5], y, { width: 130 })
+    doc.moveTo(left.x + 6, y + 16).lineTo(left.x + left.w - 6, y + 16).strokeColor(palette.grid).lineWidth(0.6).stroke()
+  })
+
+  const takeoff = summarizeMaterialTakeoff(normalizedParts)
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("MATERIAL TAKEOFF", right.x + 8, right.y + 8)
+  const takeoffRows = [
+    `Tube/Pipe: ${takeoff.tubeFeet} ft`,
+    `Rod/Bar: ${takeoff.rodFeet} ft`,
+    `Plate/Sheet pieces: ${takeoff.platePieces}`,
+    `Hardware/fit items: ${takeoff.hardwarePieces}`,
+    `Style profile: ${style}`,
+    `Weld process: ${process} @ ${thickness}`
+  ]
+  takeoffRows.forEach((row, i) => {
+    doc.font("Helvetica").fontSize(8.7).fillColor(palette.ink).text(row, right.x + 8, right.y + 30 + i * 14, { width: right.w - 16 })
+  })
+
+  doc.moveTo(right.x + 6, right.y + 126).lineTo(right.x + right.w - 6, right.y + 126).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("OPERATIONS", right.x + 8, right.y + 134)
+  const operations = uniqueStrings([
+    ...(projectData.steps || []),
+    "Deburr and stamp each part with item code.",
+    "Fixture frame on flat table and re-check diagonals.",
+    "Tack sequence complete before full weld-out.",
+    "Final verification against tolerance table."
+  ], 11)
+  operations.forEach((step, i) => {
+    doc.font("Helvetica").fontSize(8.5).fillColor(palette.ink)
+      .text(`${i + 1}. ${step}`, right.x + 8, right.y + 154 + i * 14, { width: right.w - 16 })
+  })
+
+  doc.moveTo(right.x + 6, right.y + 528).lineTo(right.x + right.w - 6, right.y + 528).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(10).text("SETUP CHECKLIST", right.x + 8, right.y + 536)
+  const checklist = [
+    "Fixture table level and clean",
+    "Datum line marked on all major parts",
+    "Cut labels match parts list item codes",
+    "Weld coupons verified for process settings",
+    "Final dry-fit completed before full weld"
+  ]
+  checklist.forEach((item, i) => {
+    const y = right.y + 556 + i * 18
+    doc.rect(right.x + 8, y + 1, 9, 9).strokeColor(palette.thin).lineWidth(0.8).stroke()
+    doc.font("Helvetica").fontSize(8.3).fillColor(palette.ink).text(item, right.x + 22, y, { width: right.w - 30 })
+  })
+
+  const sizeLine = `${dimensions.L} x ${dimensions.W} x ${dimensions.H} in`
+  const profile = `${projectMeta.category || "General"} / ${projectMeta.difficulty || "General"} / ${projectMeta.time || "Varies"}`
+  doc.fillColor(palette.thin).font("Helvetica").fontSize(9).text(
+    `SIZE: ${sizeLine}   PROFILE: ${profile}`,
+    shell.margin + 12,
+    shell.PH - 24,
+    { width: shell.PW - 120 }
+  )
+}
+
+function drawWeldAndQaPage(doc, context) {
+  const { project, process, thickness, dimensions, style, projectData, ws, palette } = context
+  const shell = drawBlueprintPageShell(
+    doc,
+    palette,
+    `${project.toUpperCase()} - WELD MAP & QA`,
+    "Weld symbol legend, tolerance matrix, and inspection checks",
+    "PAGE 3 OF 3"
+  )
+
+  const leftTop = { x: 56, y: 118, w: 520, h: 220 }
+  const leftMid = { x: 56, y: 350, w: 520, h: 272 }
+  const leftBottom = { x: 56, y: 632, w: 520, h: 166 }
+  const right = { x: 590, y: 118, w: 546, h: 680 }
+  ;[leftTop, leftMid, leftBottom, right].forEach(box => {
+    doc.rect(box.x, box.y, box.w, box.h).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  })
+
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("WELD SYMBOL LEGEND", leftTop.x + 8, leftTop.y + 8)
+  const legendRows = [
+    ["FIL", "Fillet weld", "Frame corners, braces, tabs"],
+    ["GRV", "Groove/Butt weld", "Primary full-penetration seams"],
+    ["PLG", "Plug/Rosette weld", "Plate attachment points"],
+    ["STC", "Stitch weld", "Intermittent seam sections"],
+    ["BCK", "Back-step sequence", "Distortion control on long seams"]
+  ]
+  legendRows.forEach((row, i) => {
+    const y = leftTop.y + 34 + i * 32
+    doc.rect(leftTop.x + 8, y - 2, 34, 16).strokeColor(palette.thin).lineWidth(0.8).stroke()
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(palette.ink).text(row[0], leftTop.x + 15, y + 2)
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(palette.ink).text(row[1], leftTop.x + 50, y)
+    doc.font("Helvetica").fontSize(8.3).fillColor(palette.thin).text(row[2], leftTop.x + 50, y + 12, { width: leftTop.w - 58 })
+  })
+
+  const weldRows = buildWeldScheduleRows(style, process, thickness)
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("WELD SCHEDULE", leftMid.x + 8, leftMid.y + 8)
+  const weldCols = [leftMid.x + 8, leftMid.x + 48, leftMid.x + 276, leftMid.x + 330, leftMid.x + 378, leftMid.x + 440]
+  doc.font("Helvetica-Bold").fontSize(8.5)
+  doc.text("ID", weldCols[0], leftMid.y + 30)
+  doc.text("LOCATION", weldCols[1], leftMid.y + 30)
+  doc.text("TYPE", weldCols[2], leftMid.y + 30)
+  doc.text("SYM", weldCols[3], leftMid.y + 30)
+  doc.text("SIZE", weldCols[4], leftMid.y + 30)
+  doc.text("PROC", weldCols[5], leftMid.y + 30)
+  doc.moveTo(leftMid.x + 6, leftMid.y + 44).lineTo(leftMid.x + leftMid.w - 6, leftMid.y + 44).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  weldRows.forEach((row, i) => {
+    const y = leftMid.y + 50 + i * 30
+    doc.font("Helvetica").fontSize(8.4).fillColor(palette.ink)
+    doc.text(row.id, weldCols[0], y)
+    doc.text(row.location, weldCols[1], y, { width: 220 })
+    doc.text(row.type, weldCols[2], y)
+    doc.text(row.symbol, weldCols[3], y)
+    doc.text(row.size, weldCols[4], y)
+    doc.text(row.process, weldCols[5], y)
+    doc.moveTo(leftMid.x + 6, y + 20).lineTo(leftMid.x + leftMid.w - 6, y + 20).strokeColor(palette.grid).lineWidth(0.6).stroke()
+  })
+
+  const toleranceRows = buildToleranceRows(dimensions.L, dimensions.W, dimensions.H)
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("TOLERANCE MATRIX", leftBottom.x + 8, leftBottom.y + 8)
+  const tolCols = [leftBottom.x + 8, leftBottom.x + 184, leftBottom.x + 272, leftBottom.x + 360]
+  doc.font("Helvetica-Bold").fontSize(8.5)
+  doc.text("FEATURE", tolCols[0], leftBottom.y + 30)
+  doc.text("TARGET", tolCols[1], leftBottom.y + 30)
+  doc.text("TOLERANCE", tolCols[2], leftBottom.y + 30)
+  doc.text("METHOD", tolCols[3], leftBottom.y + 30)
+  toleranceRows.slice(0, 6).forEach((row, i) => {
+    const y = leftBottom.y + 46 + i * 18
+    doc.font("Helvetica").fontSize(8.2).fillColor(palette.ink).text(row[0], tolCols[0], y, { width: 170 })
+    doc.text(row[1], tolCols[1], y, { width: 82 })
+    doc.text(row[2], tolCols[2], y, { width: 82 })
+    doc.text(row[3], tolCols[3], y, { width: 150 })
+  })
+
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("INSPECTION & RELEASE", right.x + 8, right.y + 8)
+  const qaChecks = uniqueStrings([
+    "Material IDs verified against cut list",
+    "All critical dims within tolerance table",
+    "Weld visual quality passes (uniform bead, no undercut)",
+    "No visible cracks/porosity at primary joints",
+    "Frame remains square after full weld-out",
+    "Flatness check passed on mating surfaces",
+    "Threaded mounts/chasing completed",
+    "Surface prep complete (spatter removed, edges deburred)",
+    "Coating prep complete and documented",
+    "Final fit-up test passed with mating hardware"
+  ], 10)
+
+  qaChecks.forEach((item, i) => {
+    const y = right.y + 34 + i * 22
+    doc.rect(right.x + 8, y + 1, 10, 10).strokeColor(palette.thin).lineWidth(0.8).stroke()
+    doc.font("Helvetica").fontSize(8.6).fillColor(palette.ink).text(item, right.x + 24, y, { width: right.w - 32 })
+  })
+
+  doc.moveTo(right.x + 6, right.y + 278).lineTo(right.x + right.w - 6, right.y + 278).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("WELD SETTINGS", right.x + 8, right.y + 286)
+  const weldSetup = [
+    `Process: ${process}`,
+    `Voltage/WFS: ${ws.volts} / ${ws.wfs}`,
+    `Current: ${ws.amps}`,
+    `Gas: ${payloadSafeGasLabel(process, context.gas)}`,
+    `Technique: ${ws.technique}`,
+    `Material thickness: ${thickness}`
+  ]
+  weldSetup.forEach((line, i) => {
+    doc.font("Helvetica").fontSize(8.8).fillColor(palette.ink).text(line, right.x + 8, right.y + 306 + i * 14, { width: right.w - 16 })
+  })
+
+  doc.moveTo(right.x + 6, right.y + 402).lineTo(right.x + right.w - 6, right.y + 402).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("SIGN-OFF", right.x + 8, right.y + 410)
+  const signRows = [
+    ["Fabricator", "__________________________", "Date", "__________"],
+    ["Inspector", "__________________________", "Date", "__________"],
+    ["Customer", "__________________________", "Date", "__________"]
+  ]
+  signRows.forEach((row, i) => {
+    const y = right.y + 434 + i * 38
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(palette.thin).text(row[0], right.x + 8, y)
+    doc.font("Helvetica").fontSize(8.5).fillColor(palette.ink).text(row[1], right.x + 80, y)
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(palette.thin).text(row[2], right.x + 340, y)
+    doc.font("Helvetica").fontSize(8.5).fillColor(palette.ink).text(row[3], right.x + 380, y)
+  })
+
+  const noteLines = uniqueStrings([
+    ...(projectData.callouts || []),
+    "Critical joints listed in weld schedule must be welded before cosmetic passes.",
+    "Hold dimensions from datums A/B and verify before final assembly release."
+  ], 4)
+  doc.moveTo(right.x + 6, right.y + 550).lineTo(right.x + right.w - 6, right.y + 550).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(10).text("CRITICAL NOTES", right.x + 8, right.y + 558)
+  noteLines.forEach((line, i) => {
+    doc.font("Helvetica").fontSize(8.4).fillColor(palette.ink).text(`${i + 1}. ${line}`, right.x + 8, right.y + 578 + i * 14, { width: right.w - 16 })
+  })
+
+  doc.fillColor(palette.thin).font("Helvetica").fontSize(9).text(
+    "QA RELEASE REQUIRES ALL CHECKBOXES COMPLETE AND SIGNATURES RECORDED.",
+    shell.margin + 12,
+    shell.PH - 24,
+    { width: shell.PW - 120 }
+  )
+}
+
+function payloadSafeGasLabel(process, gas) {
+  if (process === "Flux Core") return "None / Self-shielded"
+  return sanitizeText(gas, 40) || "As specified"
+}
+
 function drawBlueprint(doc, payload) {
   const { project, dimensions, welder, process, wire, wiresize, gas, thickness } = payload
   const { L, W, H } = dimensions
@@ -2675,6 +3160,21 @@ function drawBlueprint(doc, payload) {
     PH - 20,
     { width: PW - margin * 2 - 16, align: "center" }
   )
+
+  const detailContext = {
+    project,
+    projectMeta,
+    projectData,
+    dimensions: { L, W, H },
+    style,
+    process,
+    thickness,
+    gas,
+    ws,
+    palette: C
+  }
+  drawFabricationPackagePage(doc, detailContext)
+  drawWeldAndQaPage(doc, detailContext)
 }
 
 async function getPayPalAccessToken() {
