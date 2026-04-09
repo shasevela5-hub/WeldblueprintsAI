@@ -63,6 +63,8 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .stat-card.revenue::before{background:var(--yellow)}
 .stat-card.gens::before{background:var(--chalk-faint)}
 .stat-card.projects::before{background:#A855F7}
+.stat-card.conversions::before{background:#00C2A8}
+.stat-card.failures::before{background:var(--red)}
 .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--chalk-faint);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
 .stat-value{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;line-height:1}
 .stat-card.total .stat-value{color:var(--blue)}
@@ -71,6 +73,8 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .stat-card.revenue .stat-value{color:var(--yellow)}
 .stat-card.gens .stat-value{color:var(--chalk)}
 .stat-card.projects .stat-value{color:#A855F7}
+.stat-card.conversions .stat-value{color:#00C2A8}
+.stat-card.failures .stat-value{color:var(--red)}
 
 /* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
@@ -164,12 +168,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
   <!-- Stats -->
   <div class="stats-grid" id="statsGrid">
-    <div class="stat-card total"><div class="stat-label">Total Users</div><div class="stat-value" id="statTotal">—</div></div>
-    <div class="stat-card pro"><div class="stat-label">Pro Users</div><div class="stat-value" id="statPro">—</div></div>
-    <div class="stat-card free"><div class="stat-label">Free Users</div><div class="stat-value" id="statFree">—</div></div>
-    <div class="stat-card revenue"><div class="stat-label">Revenue</div><div class="stat-value" id="statRevenue">—</div></div>
-    <div class="stat-card gens"><div class="stat-label">Total Blueprints</div><div class="stat-value" id="statGens">—</div></div>
-    <div class="stat-card projects"><div class="stat-label">Saved Projects</div><div class="stat-value" id="statProjects">—</div></div>
+    <div class="stat-card total"><div class="stat-label">Total Users</div><div class="stat-value" id="statTotal">--</div></div>
+    <div class="stat-card pro"><div class="stat-label">Pro Users</div><div class="stat-value" id="statPro">--</div></div>
+    <div class="stat-card free"><div class="stat-label">Free Users</div><div class="stat-value" id="statFree">--</div></div>
+    <div class="stat-card revenue"><div class="stat-label">Revenue</div><div class="stat-value" id="statRevenue">--</div></div>
+    <div class="stat-card conversions"><div class="stat-label">Paid Conversions</div><div class="stat-value" id="statPaidConversions">--</div></div>
+    <div class="stat-card failures"><div class="stat-label">Generation Errors</div><div class="stat-value" id="statGenErrors">--</div></div>
+    <div class="stat-card gens"><div class="stat-label">Total Blueprints</div><div class="stat-value" id="statGens">--</div></div>
+    <div class="stat-card projects"><div class="stat-label">Saved Projects</div><div class="stat-value" id="statProjects">--</div></div>
   </div>
 
   <!-- Toolbar -->
@@ -259,7 +265,7 @@ async function adminLogin() {
     showAdmin();
     loadData();
   } catch (e) {
-    errEl.textContent = 'Connection error — is the server running?';
+    errEl.textContent = 'Connection error -- is the server running?';
     errEl.style.display = 'block';
   }
 }
@@ -302,6 +308,8 @@ async function loadData() {
     document.getElementById('statPro').textContent = stats.proUsers;
     document.getElementById('statFree').textContent = stats.freeUsers;
     document.getElementById('statRevenue').textContent = '$' + stats.revenue.toFixed(2);
+    document.getElementById('statPaidConversions').textContent = stats.paidConversions ?? 0;
+    document.getElementById('statGenErrors').textContent = `${stats.generationFailures ?? 0} (${stats.generationFailureRate ?? 0}%)`;
     document.getElementById('statGens').textContent = stats.totalGenerations;
     document.getElementById('statProjects').textContent = stats.totalProjects;
 
@@ -341,9 +349,9 @@ function renderTable() {
   tbody.innerHTML = filtered.map(u => {
     const genPct = Math.min(100, (u.generationsUsed / 3) * 100);
     const genColor = u.isPro ? 'var(--orange)' : (u.generationsUsed >= 3 ? 'var(--red)' : 'var(--green)');
-    const genLabel = u.isPro ? '∞' : `${u.generationsUsed}/3`;
-    const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—';
-    const proSince = u.proActivatedAt ? new Date(u.proActivatedAt).toLocaleDateString() : '—';
+    const genLabel = u.isPro ? 'Unlimited' : `${u.generationsUsed}/3`;
+    const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '--';
+    const proSince = u.proActivatedAt ? new Date(u.proActivatedAt).toLocaleDateString() : '--';
 
     const statusBadge = u.isAdmin
       ? '<span class="badge-admin"><i class="fas fa-crown"></i> Admin</span>'
@@ -351,7 +359,7 @@ function renderTable() {
         ? '<span class="badge-pro"><i class="fas fa-bolt"></i> Pro</span>'
         : '<span class="badge-free">Free</span>';
 
-    const actions = u.isAdmin ? '<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--chalk-faint);">— admin account —</span>' : `
+    const actions = u.isAdmin ? '<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--chalk-faint);">-- admin account --</span>' : `
       ${!u.isPro ? `<button class="act-btn grant" onclick="grantPro(${u.id})"><i class="fas fa-bolt"></i> Grant Pro</button>` : ''}
       ${u.isPro ? `<button class="act-btn revoke" onclick="revokePro(${u.id})"><i class="fas fa-times"></i> Revoke Pro</button>` : ''}
       <button class="act-btn reset" onclick="resetGens(${u.id})"><i class="fas fa-redo"></i> Reset Gens</button>

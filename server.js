@@ -4,6 +4,7 @@ const express = require("express")
 const cors = require("cors")
 const fs = require("fs")
 const path = require("path")
+const crypto = require("crypto")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const session = require("express-session")
@@ -2533,8 +2534,77 @@ function buildToleranceRows(L, W, H) {
   ]
 }
 
+function buildBlueprintQaScorecard(projectData, dimensions, process, thickness) {
+  const partCount = Array.isArray(projectData.parts) ? projectData.parts.length : 0
+  const stepCount = Array.isArray(projectData.steps) ? projectData.steps.length : 0
+  const calloutCount = Array.isArray(projectData.callouts) ? projectData.callouts.length : 0
+  const hasFeatureSummary = !!sanitizeText(projectData.featureSummary, 120)
+  const largeBuild = dimensions.L >= 96 || dimensions.W >= 48 || dimensions.H >= 60
+
+  const cutList = clampNumber(Math.round(9 + partCount * 1.2), 10, 25)
+  const assembly = clampNumber(Math.round(8 + stepCount * 1.3), 8, 20)
+  const projectSpecific = clampNumber(Math.round(6 + calloutCount * 3.5 + (hasFeatureSummary ? 2 : 0)), 6, 20)
+
+  const processBase = process === "MIG" ? 16 : process === "TIG" ? 15 : 14
+  const thicknessPenaltyMap = { "1/8": 0, "3/16": 1, "1/4": 2, "1/2": 3 }
+  const thicknessPenalty = thicknessPenaltyMap[thickness] || 1
+  const weldReadiness = clampNumber(processBase - thicknessPenalty + Math.min(3, calloutCount), 10, 20)
+
+  const inspectionCoverage = clampNumber(
+    Math.round(9 + Math.min(5, Math.ceil(partCount / 2)) + (largeBuild ? 1 : 0)),
+    9,
+    15
+  )
+
+  const rows = [
+    { label: "Cut list completeness", score: cutList, max: 25 },
+    { label: "Assembly sequencing", score: assembly, max: 20 },
+    { label: "Project-specific detailing", score: projectSpecific, max: 20 },
+    { label: "Weld readiness package", score: weldReadiness, max: 20 },
+    { label: "Inspection coverage", score: inspectionCoverage, max: 15 }
+  ]
+
+  const total = rows.reduce((sum, row) => sum + row.score, 0)
+  const grade = total >= 92 ? "A" : total >= 85 ? "B" : total >= 75 ? "C" : "D"
+  const releaseTarget = 85
+  const releaseStatus = total >= releaseTarget
+    ? "Release-ready after in-shop verification."
+    : "Add detail depth before customer release."
+
+  return {
+    rows,
+    total,
+    grade,
+    releaseTarget,
+    releaseStatus
+  }
+}
+
+function buildBlueprintDocumentMeta(payload) {
+  const canonical = [
+    sanitizeText(payload.project, 120).toLowerCase(),
+    `${payload.dimensions.L}x${payload.dimensions.W}x${payload.dimensions.H}`,
+    sanitizeText(payload.process, 40).toLowerCase(),
+    sanitizeText(payload.wire, 40).toLowerCase(),
+    sanitizeText(payload.wiresize, 20).toLowerCase(),
+    sanitizeText(payload.gas, 40).toLowerCase(),
+    sanitizeText(payload.thickness, 20).toLowerCase()
+  ].join("|")
+  const hash = crypto.createHash("sha1").update(canonical).digest("hex").slice(0, 10).toUpperCase()
+  const issuedAt = new Date()
+
+  return {
+    revision: "A",
+    version: "1.0",
+    docId: `WB-${hash}`,
+    issuedDate: issuedAt.toISOString().slice(0, 10),
+    issuedTime: `${issuedAt.toISOString().slice(11, 16)} UTC`,
+    releaseType: "Customer Release"
+  }
+}
+
 function drawFabricationPackagePage(doc, context) {
-  const { project, projectMeta, projectData, dimensions, style, process, thickness, palette } = context
+  const { project, projectMeta, projectData, dimensions, style, process, thickness, palette, documentMeta } = context
   const shell = drawBlueprintPageShell(
     doc,
     palette,
@@ -2628,8 +2698,11 @@ function drawFabricationPackagePage(doc, context) {
 
   const sizeLine = `${dimensions.L} x ${dimensions.W} x ${dimensions.H} in`
   const profile = `${projectMeta.category || "General"} / ${projectMeta.difficulty || "General"} / ${projectMeta.time || "Varies"}`
+  const docTag = documentMeta && documentMeta.docId
+    ? `   DOC: ${documentMeta.docId} REV ${documentMeta.revision}`
+    : ""
   doc.fillColor(palette.thin).font("Helvetica").fontSize(9).text(
-    `SIZE: ${sizeLine}   PROFILE: ${profile}`,
+    `SIZE: ${sizeLine}   PROFILE: ${profile}${docTag}`,
     shell.margin + 12,
     shell.PH - 24,
     { width: shell.PW - 120 }
@@ -2637,7 +2710,7 @@ function drawFabricationPackagePage(doc, context) {
 }
 
 function drawWeldAndQaPage(doc, context) {
-  const { project, process, thickness, dimensions, style, projectData, ws, palette } = context
+  const { project, process, thickness, dimensions, style, projectData, ws, palette, documentMeta } = context
   const shell = drawBlueprintPageShell(
     doc,
     palette,
@@ -2743,15 +2816,37 @@ function drawWeldAndQaPage(doc, context) {
     doc.font("Helvetica").fontSize(8.8).fillColor(palette.ink).text(line, right.x + 8, right.y + 306 + i * 14, { width: right.w - 16 })
   })
 
+  const scorecard = buildBlueprintQaScorecard(projectData, dimensions, process, thickness)
   doc.moveTo(right.x + 6, right.y + 402).lineTo(right.x + right.w - 6, right.y + 402).strokeColor(palette.thin).lineWidth(0.8).stroke()
-  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("SIGN-OFF", right.x + 8, right.y + 410)
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("BLUEPRINT QA SCORECARD", right.x + 8, right.y + 410)
+  const scoreCols = [right.x + 8, right.x + 372, right.x + 432]
+  doc.font("Helvetica-Bold").fontSize(8.3).fillColor(palette.thin)
+  doc.text("CATEGORY", scoreCols[0], right.y + 426)
+  doc.text("SCORE", scoreCols[1], right.y + 426)
+  doc.text("MAX", scoreCols[2], right.y + 426)
+  scorecard.rows.forEach((row, i) => {
+    const y = right.y + 440 + i * 16
+    doc.font("Helvetica").fontSize(8.3).fillColor(palette.ink).text(row.label, scoreCols[0], y, { width: 350 })
+    doc.font("Helvetica-Bold").fontSize(8.3).fillColor(palette.ink).text(String(row.score), scoreCols[1], y, { width: 50, align: "right" })
+    doc.font("Helvetica").fontSize(8.3).fillColor(palette.thin).text(String(row.max), scoreCols[2], y, { width: 40, align: "right" })
+  })
+
+  const totalY = right.y + 524
+  doc.moveTo(right.x + 6, totalY).lineTo(right.x + right.w - 6, totalY).strokeColor(palette.grid).lineWidth(0.8).stroke()
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.ink)
+    .text(`TOTAL: ${scorecard.total}/100   GRADE: ${scorecard.grade}`, right.x + 8, totalY + 6, { width: right.w - 16 })
+  doc.font("Helvetica").fontSize(8.2).fillColor(palette.thin)
+    .text(`Release gate ${scorecard.releaseTarget}/100: ${scorecard.releaseStatus}`, right.x + 8, totalY + 20, { width: right.w - 16 })
+
+  doc.moveTo(right.x + 6, right.y + 548).lineTo(right.x + right.w - 6, right.y + 548).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(11).text("SIGN-OFF", right.x + 8, right.y + 556)
   const signRows = [
-    ["Fabricator", "__________________________", "Date", "__________"],
-    ["Inspector", "__________________________", "Date", "__________"],
-    ["Customer", "__________________________", "Date", "__________"]
+    ["Fabricator", "_____________________", "Date", "__________"],
+    ["QA Inspector", "_____________________", "Date", "__________"],
+    ["Customer", "_____________________", "Date", "__________"]
   ]
   signRows.forEach((row, i) => {
-    const y = right.y + 434 + i * 38
+    const y = right.y + 580 + i * 24
     doc.font("Helvetica-Bold").fontSize(8.5).fillColor(palette.thin).text(row[0], right.x + 8, y)
     doc.font("Helvetica").fontSize(8.5).fillColor(palette.ink).text(row[1], right.x + 80, y)
     doc.font("Helvetica-Bold").fontSize(8.5).fillColor(palette.thin).text(row[2], right.x + 340, y)
@@ -2760,13 +2855,16 @@ function drawWeldAndQaPage(doc, context) {
 
   const noteLines = uniqueStrings([
     ...(projectData.callouts || []),
+    documentMeta && documentMeta.docId
+      ? `Document ${documentMeta.docId} Rev ${documentMeta.revision} v${documentMeta.version}`
+      : "",
     "Critical joints listed in weld schedule must be welded before cosmetic passes.",
     "Hold dimensions from datums A/B and verify before final assembly release."
-  ], 4)
-  doc.moveTo(right.x + 6, right.y + 550).lineTo(right.x + right.w - 6, right.y + 550).strokeColor(palette.thin).lineWidth(0.8).stroke()
-  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(10).text("CRITICAL NOTES", right.x + 8, right.y + 558)
+  ], 5)
+  doc.moveTo(right.x + 6, right.y + 658).lineTo(right.x + right.w - 6, right.y + 658).strokeColor(palette.thin).lineWidth(0.8).stroke()
+  doc.fillColor(palette.ink).font("Helvetica-Bold").fontSize(10).text("CRITICAL NOTES", right.x + 8, right.y + 666)
   noteLines.forEach((line, i) => {
-    doc.font("Helvetica").fontSize(8.4).fillColor(palette.ink).text(`${i + 1}. ${line}`, right.x + 8, right.y + 578 + i * 14, { width: right.w - 16 })
+    doc.font("Helvetica").fontSize(8.2).fillColor(palette.ink).text(`${i + 1}. ${line}`, right.x + 8, right.y + 686 + i * 13, { width: right.w - 16 })
   })
 
   doc.fillColor(palette.thin).font("Helvetica").fontSize(9).text(
@@ -2788,6 +2886,15 @@ function drawBlueprint(doc, payload) {
   const projectData = defaultProjectData(project, L, W, H)
   const projectMeta = blueprintGallery[project] || {}
   const ws = getWeldSettings(thickness, process)
+  const documentMeta = buildBlueprintDocumentMeta({
+    project,
+    dimensions,
+    process,
+    wire,
+    wiresize,
+    gas,
+    thickness
+  })
   const PW = 1190
   const PH = 842
   const C = {
@@ -3133,6 +3240,25 @@ function drawBlueprint(doc, payload) {
 
   doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("TITLE BLOCK", titleBox.x + 8, titleBox.y + 8)
   doc.moveTo(titleBox.x + 6, titleBox.y + 24).lineTo(titleBox.x + titleBox.w - 6, titleBox.y + 24).strokeColor(C.thin).lineWidth(0.8).stroke()
+  const revisionBox = { x: titleBox.x + titleBox.w - 164, y: titleBox.y + 28, w: 154, h: titleBox.h - 34 }
+  doc.moveTo(revisionBox.x - 8, titleBox.y + 24).lineTo(revisionBox.x - 8, titleBox.y + titleBox.h - 6).strokeColor(C.grid).lineWidth(0.8).stroke()
+  doc.rect(revisionBox.x, revisionBox.y, revisionBox.w, revisionBox.h).strokeColor(C.grid).lineWidth(0.8).stroke()
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(C.thin).text("REVISION CONTROL", revisionBox.x + 6, revisionBox.y + 6, { width: revisionBox.w - 12 })
+  doc.moveTo(revisionBox.x + 6, revisionBox.y + 20).lineTo(revisionBox.x + revisionBox.w - 6, revisionBox.y + 20).strokeColor(C.grid).lineWidth(0.8).stroke()
+  const revisionRows = [
+    ["REV", documentMeta.revision],
+    ["VERSION", documentMeta.version],
+    ["DOC ID", documentMeta.docId],
+    ["ISSUED", documentMeta.issuedDate],
+    ["TIME", documentMeta.issuedTime],
+    ["RELEASE", documentMeta.releaseType]
+  ]
+  revisionRows.forEach((row, i) => {
+    const yy = revisionBox.y + 26 + i * 14
+    doc.font("Helvetica-Bold").fontSize(7.6).fillColor(C.thin).text(row[0], revisionBox.x + 6, yy)
+    doc.font("Helvetica").fontSize(7.8).fillColor(C.ink).text(String(row[1]), revisionBox.x + 50, yy, { width: revisionBox.w - 56 })
+  })
+
   const profileLine = `${projectMeta.category || "General"} / ${projectMeta.difficulty || "General"} / ${projectMeta.time || "Varies"}`
   const tb = [
     ["PROJECT", project],
@@ -3148,10 +3274,11 @@ function drawBlueprint(doc, payload) {
     ["WELD SET", `${ws.volts}V  ${ws.wfs}  ${ws.amps}`]
   ]
   const rowStep = tb.length > 10 ? 11 : 12
+  const mainValueWidth = Math.max(120, revisionBox.x - (titleBox.x + 90) - 8)
   tb.forEach((r, i) => {
     const yy = titleBox.y + 30 + i * rowStep
     doc.font("Helvetica-Bold").fontSize(8).fillColor(C.thin).text(r[0], titleBox.x + 8, yy)
-    doc.font("Helvetica").fontSize(8.5).fillColor(C.ink).text(String(r[1]), titleBox.x + 90, yy, { width: titleBox.w - 98 })
+    doc.font("Helvetica").fontSize(8.5).fillColor(C.ink).text(sanitizeText(r[1], 46), titleBox.x + 90, yy, { width: mainValueWidth })
   })
 
   doc.fillColor(C.thin).font("Helvetica").fontSize(9).text(
@@ -3171,7 +3298,8 @@ function drawBlueprint(doc, payload) {
     thickness,
     gas,
     ws,
-    palette: C
+    palette: C,
+    documentMeta
   }
   drawFabricationPackagePage(doc, detailContext)
   drawWeldAndQaPage(doc, detailContext)
@@ -3762,13 +3890,25 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
 })
 
 app.get("/api/admin/stats", requireAdmin, (req, res) => {
+  const totals = analytics.totals || {}
+  const paidConversions = Number(totals.payment_success || 0)
+  const generationFailures = Number(totals.generate_error || 0)
+  const generationSuccesses = Number(totals.generate_success || 0)
+  const generationAttempts = generationFailures + generationSuccesses
+  const generationFailureRate = generationAttempts
+    ? Number(((generationFailures / generationAttempts) * 100).toFixed(1))
+    : 0
+
   res.json({
     totalUsers: users.length,
     proUsers: users.filter(u => u.isPro && !u.isAdmin).length,
     freeUsers: users.filter(u => !u.isPro && !u.isAdmin).length,
     totalGenerations: users.reduce((sum, u) => sum + (u.generationsUsed || 0), 0),
     revenue: users.filter(u => u.isPro && !u.isAdmin && u.paypalOrderID !== "ADMIN_GRANTED").length * 19.99,
-    totalProjects: savedProjects.length
+    totalProjects: savedProjects.length,
+    paidConversions,
+    generationFailures,
+    generationFailureRate
   })
 })
 
