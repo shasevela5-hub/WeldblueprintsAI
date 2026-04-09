@@ -1,0 +1,245 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+
+:root {
+  --orange: #FF5E1A;
+  --orange-dim: rgba(255, 94, 26, 0.14);
+  --border-hot: rgba(255, 94, 26, 0.4);
+  --steel: #1C1F26;
+  --steel-light: #252932;
+  --steel-mid: #2E3340;
+  --plate: #0E1017;
+  --chalk: #F0EDE4;
+  --chalk-dim: rgba(240, 237, 228, 0.68);
+  --chalk-faint: rgba(240, 237, 228, 0.2);
+  --green: #39C46B;
+  --yellow: #FFD600;
+  --red: #FF4646;
+  --blue: #4A90D9;
+  --bg: var(--plate);
+  --paper: var(--steel);
+  --ink: var(--chalk);
+  --muted: var(--chalk-dim);
+  --line: rgba(240, 237, 228, 0.14);
+  --line-strong: rgba(240, 237, 228, 0.24);
+  --card: rgba(28, 31, 38, 0.92);
+  --shadow: 0 20px 48px rgba(0, 0, 0, 0.42);
+  --primary: var(--orange);
+  --primary-dark: #D65A1F;
+  --secondary: var(--blue);
+  --dark: var(--steel);
+  --darker: var(--plate);
+  --card-bg: var(--steel);
+  --text: var(--chalk);
+  --text-muted: var(--chalk-dim);
+  --success: var(--green);
+  --danger: var(--red);
+  --warning: var(--yellow);
+}
+
+html,
+body {
+  background-color: var(--plate);
+}
+
+body {
+  color: var(--chalk);
+  font-family: "Barlow", sans-serif;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(255, 94, 26, 0.16), transparent 26%),
+    radial-gradient(circle at 86% 12%, rgba(74, 144, 217, 0.16), transparent 24%),
+    linear-gradient(180deg, #111723 0%, #0E1017 100%);
+}
+
+body::before {
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255, 255, 255, 0.013) 39px, rgba(255, 255, 255, 0.013) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255, 255, 255, 0.013) 39px, rgba(255, 255, 255, 0.013) 40px);
+  background-size: auto;
+  opacity: 1;
+}
+
+h1,
+h2,
+h3,
+.brand-text,
+.logo-text,
+.login-title,
+.welder-title,
+.header h1 {
+  font-family: "Barlow Condensed", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.header h1 {
+  background: none;
+  -webkit-text-fill-color: var(--chalk);
+  color: var(--chalk);
+}
+
+.header h1 i {
+  color: var(--orange);
+}
+
+p,
+li,
+td,
+.user-name {
+  color: var(--chalk-dim);
+}
+
+.nav,
+.nav a,
+.btn,
+button,
+label,
+th,
+.eyebrow,
+.admin-badge,
+.count-label,
+.stat-label,
+.user-pill,
+.badge-pro,
+.badge-free,
+.badge-admin {
+  font-family: "DM Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+a {
+  color: var(--chalk);
+}
+
+a:hover {
+  color: var(--orange);
+}
+
+.topbar-inner,
+.panel,
+.card,
+.hero-card,
+.stats-card,
+.table-wrap,
+.login-box,
+.welder-list,
+.settings-panel,
+.stat-card,
+.summary-card,
+.pricing-card {
+  background: rgba(28, 31, 38, 0.92);
+  border-color: rgba(240, 237, 228, 0.12);
+}
+
+.brand-mark,
+.logo-mark,
+.login-mark {
+  border-radius: 0;
+  clip-path: polygon(7px 0%, 100% 0%, calc(100% - 7px) 100%, 0% 100%);
+  background: var(--orange);
+  box-shadow: 0 12px 26px rgba(255, 94, 26, 0.24);
+}
+
+.brand-mark img {
+  object-fit: cover;
+}
+
+.brand-text strong {
+  color: var(--orange);
+}
+
+.btn-primary,
+.btn-accent,
+.login-btn,
+.nav a.active,
+.filter-btn.active,
+.act-btn.grant:hover {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #000;
+}
+
+.btn-primary:hover,
+.btn-accent:hover,
+.login-btn:hover {
+  filter: brightness(1.06);
+}
+
+.btn-ghost,
+.home-btn,
+.logout-btn,
+.filter-btn,
+.act-btn {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--chalk-dim);
+  border-color: rgba(240, 237, 228, 0.16);
+}
+
+.btn-ghost:hover,
+.home-btn:hover,
+.logout-btn:hover,
+.filter-btn:hover,
+.act-btn:hover {
+  border-color: var(--border-hot);
+  color: var(--chalk);
+}
+
+input,
+select,
+textarea,
+.toolbar-search {
+  background: rgba(9, 12, 18, 0.78);
+  border: 1px solid rgba(240, 237, 228, 0.16);
+  color: var(--chalk);
+  font-family: "Barlow", sans-serif;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.toolbar-search:focus {
+  border-color: var(--orange);
+  outline: none;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-link .brand-mark {
+  width: 40px;
+  height: 40px;
+}
+
+.brand-link .brand-text {
+  font-size: 1rem;
+  line-height: 0.95;
+}
+
+.back-link {
+  font-family: "DM Mono", monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--chalk-dim);
+}
+
+.back-link:hover {
+  color: var(--orange);
+}
+
+@media (max-width: 768px) {
+  .brand-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

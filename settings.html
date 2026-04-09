@@ -508,11 +508,19 @@ body::before {
   .process-tab { padding: 10px 20px; }
 }
 </style>
+  <link rel="stylesheet" href="/app-theme.css" />
 </head>
 
 <body>
 <div class="container">
 <div class="header">
+<div class="brand-row">
+<a class="brand-link" href="/index.html">
+<span class="brand-mark"><img src="/logo.svg" alt="WeldBlueprints AI logo"></span>
+<span class="brand-text">WELDBLUEPRINTS <strong>AI</strong></span>
+</a>
+<a class="back-link" href="/index.html">Back To Generator</a>
+</div>
 <h1><i class="fas fa-sliders-h"></i> Weld Settings Database</h1>
 <p>Community-tested settings for your exact welder</p>
 <div class="nav">
@@ -562,7 +570,7 @@ body::before {
 <input type="text" id="settingVolts" placeholder="Voltage (e.g., 19.5)">
 <input type="text" id="settingWireSpeed" placeholder="Wire Speed (IPM)">
 <input type="text" id="settingGas" placeholder="Gas (e.g., C25)">
-<input type="text" id="settingTechnique" placeholder="Technique (e.g., Push 10°)">
+<input type="text" id="settingTechnique" placeholder="Technique (e.g., Push 10Ãƒâ€šÃ‚Â°)">
 <input type="text" id="userName" placeholder="Your Name (optional)">
 <button type="submit"><i class="fas fa-share"></i> Share Settings</button>
 </form>
@@ -738,7 +746,7 @@ body: JSON.stringify(data)
 
 const result = await response.json()
 if (result.success) {
-alert('✅ Settings shared! Thank you for contributing.')
+alert('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Settings shared! Thank you for contributing.')
 this.reset()
 }
 } catch(error) {
