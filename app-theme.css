@@ -34,6 +34,9 @@
   --success: var(--green);
   --danger: var(--red);
   --warning: var(--yellow);
+  --radius: 16px;
+  --radius-sm: 12px;
+  --max: 1240px;
 }
 
 html,
@@ -58,6 +61,11 @@ body::before {
   opacity: 1;
 }
 
+.wrap,
+.container {
+  width: min(var(--max), calc(100% - 42px)) !important;
+}
+
 h1,
 h2,
 h3,
@@ -74,6 +82,8 @@ h3,
   background: none;
   -webkit-text-fill-color: var(--chalk);
   color: var(--chalk);
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .header h1 i {
@@ -128,12 +138,32 @@ a:hover {
 .pricing-card {
   background: rgba(28, 31, 38, 0.92);
   border-color: rgba(240, 237, 228, 0.12);
+  border-radius: var(--radius) !important;
+}
+
+.topbar-inner {
+  border-radius: 24px !important;
+  position: relative;
+  border: 1px solid rgba(240, 237, 228, 0.14) !important;
+}
+
+.topbar-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), transparent 60%);
 }
 
 .brand-mark,
 .logo-mark,
 .login-mark {
-  border-radius: 0;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 0 !important;
+  overflow: hidden;
   clip-path: polygon(7px 0%, 100% 0%, calc(100% - 7px) 100%, 0% 100%);
   background: var(--orange);
   box-shadow: 0 12px 26px rgba(255, 94, 26, 0.24);
@@ -141,10 +171,41 @@ a:hover {
 
 .brand-mark img {
   object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.brand-text,
+.logo-text {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.2rem !important;
+  font-weight: 800 !important;
+  line-height: 0.95;
+  letter-spacing: 0.03em !important;
 }
 
 .brand-text strong {
   color: var(--orange);
+}
+
+.logo-text span {
+  color: var(--orange);
+}
+
+.topbar .nav a,
+.nav a {
+  border: 1px solid transparent;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  color: var(--chalk-dim) !important;
+  transition: all 0.16s ease;
+}
+
+.topbar .nav a:hover,
+.nav a:hover {
+  background: var(--orange-dim) !important;
+  border-color: var(--border-hot) !important;
+  color: var(--chalk) !important;
 }
 
 .btn-primary,
@@ -156,6 +217,13 @@ a:hover {
   background: var(--orange);
   border-color: var(--orange);
   color: #000;
+}
+
+.btn,
+button,
+.login-btn {
+  border-radius: 12px !important;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
 }
 
 .btn-primary:hover,
@@ -199,6 +267,27 @@ textarea:focus,
 .toolbar-search:focus {
   border-color: var(--orange);
   outline: none;
+}
+
+.card {
+  border: 1px solid rgba(240, 237, 228, 0.12) !important;
+}
+
+.hero-copy,
+.hero-art,
+.generator,
+.status-card,
+.mini-card,
+.hero-card,
+.settings-panel,
+.welder-list {
+  padding: 28px !important;
+}
+
+.eyebrow {
+  color: var(--orange) !important;
+  border-color: rgba(255, 94, 26, 0.26) !important;
+  background: rgba(255, 94, 26, 0.1) !important;
 }
 
 .brand-row {
