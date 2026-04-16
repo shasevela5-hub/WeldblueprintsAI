@@ -2922,6 +2922,16 @@ function drawBlueprint(doc, payload) {
   const partBox = { x: 600, y: 390, w: 470, h: 250 }
   const titleBox = { x: 600, y: 655, w: 470, h: 150 }
   const style = getProjectStyle(project)
+  const deckStyles = new Set(["trailer", "flatbed", "rack", "skid"])
+  const panelStyles = new Set(["gate", "railing", "wallshelf", "decor", "sculpture"])
+  const basinStyles = new Set(["pit", "planter"])
+  const canopyStyles = new Set(["greenhouse", "pergola", "carport", "mezzanine"])
+  const frameStyles = new Set(["cart", "table", "shelf", "furniture", "frame", "struct", "outdoor", "bookshelf", "winerack", "murphy"])
+  const isDeckStyle = deckStyles.has(style)
+  const isPanelStyle = panelStyles.has(style)
+  const isBasinStyle = basinStyles.has(style)
+  const isCanopyStyle = canopyStyles.has(style)
+  const isFrameStyle = frameStyles.has(style)
   const visual = projectData.visual || {}
   const visualProfile = {
     frontDivisions: clampNumber(visual.frontDivisions || 3, 2, 6),
@@ -2941,13 +2951,74 @@ function drawBlueprint(doc, payload) {
     doc.rect(b.x, b.y, b.w, b.h).strokeColor(C.thin).lineWidth(0.8).stroke()
   })
 
+  // Add subtle title bands so each projection reads like a drafted sheet zone.
+  ;[frontBox, sideBox, topBox, isoBox].forEach(box => {
+    doc.rect(box.x + 1, box.y + 1, box.w - 2, 22).fillColor("#DDD8C2").fill()
+    doc.rect(box.x + 1, box.y + 23, box.w - 2, box.h - 24).strokeColor(C.grid).lineWidth(0.5).stroke()
+  })
+
   const pxPerIn = Math.min((frontBox.w - 80) / Math.max(L, 1), (frontBox.h - 70) / Math.max(H, 1))
   const wPx = L * pxPerIn
   const hPx = H * pxPerIn
   const depthPx = W * pxPerIn
+  const renderDepthIn = isPanelStyle
+    ? Math.max(W, Math.max(6, Math.round(L * 0.12)))
+    : isBasinStyle
+      ? Math.max(W, Math.max(8, Math.round(L * 0.16)))
+      : isCanopyStyle
+        ? Math.max(W, Math.max(10, Math.round(L * 0.2)))
+        : W
+  const minDepthPx = isPanelStyle ? 46 : isCanopyStyle ? 40 : isBasinStyle ? 34 : 20
+  const maxDepthPx = Math.max(minDepthPx + 2, Math.min(sideBox.w - 30, topBox.h - 34))
+  const depthRenderPx = clampNumber(renderDepthIn * pxPerIn, minDepthPx, maxDepthPx)
+  const isoDepthIn = pxPerIn > 0 ? depthRenderPx / pxPerIn : W
+  const fmtDim = value => {
+    const num = Number(value)
+    if (!Number.isFinite(num)) return "-"
+    return Number.isInteger(num) ? String(num) : num.toFixed(1)
+  }
+
+  const footprintDiag = Math.sqrt(L * L + W * W)
+  doc.fillColor(C.thin).font("Helvetica-Bold").fontSize(9)
+    .text(
+      `DIMENSIONS (IN): L ${fmtDim(L)}   W ${fmtDim(W)}   H ${fmtDim(H)}   FOOTPRINT DIAG ${fmtDim(footprintDiag)}`,
+      120,
+      116,
+      { width: 620 }
+    )
 
   const fx = frontBox.x + (frontBox.w - wPx) / 2
   const fy = frontBox.y + frontBox.h - 40
+  const hiddenLine = (x1, y1, x2, y2) => {
+    doc.save()
+    doc.dash(4, { space: 3 })
+    doc.moveTo(x1, y1).lineTo(x2, y2).strokeColor(C.thin).lineWidth(0.8).stroke()
+    doc.undash()
+    doc.restore()
+  }
+  const drawDatum = (x, y, label) => {
+    doc.circle(x, y, 8).fillColor(C.paper).fill()
+    doc.circle(x, y, 8).strokeColor(C.ink).lineWidth(1).stroke()
+    doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(8).text(label, x - 2.5, y - 3)
+  }
+  const drawArrowHead = (x, y, angle, size = 5) => {
+    const a1 = angle + Math.PI * 0.8
+    const a2 = angle - Math.PI * 0.8
+    doc.moveTo(x, y)
+      .lineTo(x + Math.cos(a1) * size, y + Math.sin(a1) * size)
+      .lineTo(x + Math.cos(a2) * size, y + Math.sin(a2) * size)
+      .closePath()
+      .fillColor(C.thin)
+      .fill()
+  }
+  const hatchRect = (x, y, w, h, spacing = 8) => {
+    doc.save()
+    doc.rect(x, y, w, h).clip()
+    for (let i = -h; i < w + h; i += spacing) {
+      doc.moveTo(x + i, y + h).lineTo(x + i + h, y).strokeColor(C.grid).lineWidth(0.45).stroke()
+    }
+    doc.restore()
+  }
   if (style === "cage") {
     const rearW = wPx * 0.78
     const rearX = fx + (wPx - rearW) / 2
@@ -2992,6 +3063,18 @@ function drawBlueprint(doc, payload) {
     doc.rect(fx, fy - hPx, wPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
     doc.moveTo(fx + wPx * 0.5, fy - hPx).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
     doc.moveTo(fx + wPx * 0.15, fy - hPx * 0.55).lineTo(fx + wPx * 0.85, fy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+    hatchRect(fx + 1, fy - hPx + 1, Math.max(0, wPx - 2), Math.max(0, hPx - 2), 10)
+  }
+
+  if (!isPanelStyle && !isBasinStyle && style !== "cage" && style !== "hoist" && style !== "lift") {
+    const dz = Math.max(12, Math.min(34, depthRenderPx * 0.2))
+    const rearX = fx + dz
+    const rearY = fy - hPx - dz
+    doc.rect(rearX, rearY, wPx, hPx).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(fx, fy - hPx).lineTo(rearX, rearY).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(fx + wPx, fy - hPx).lineTo(rearX + wPx, rearY).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(fx + wPx, fy).lineTo(rearX + wPx, rearY + hPx).strokeColor(C.thin).lineWidth(0.9).stroke()
+    hiddenLine(fx, fy, rearX, rearY + hPx)
   }
 
   let frontBodyTopY = fy - hPx
@@ -3073,6 +3156,7 @@ function drawBlueprint(doc, payload) {
   } else {
     doc.rect(sx, sy - hPx, depthPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
     doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.55).lineTo(sx + depthPx * 0.8, sy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
+    hatchRect(sx + 1, sy - hPx + 1, Math.max(0, depthPx - 2), Math.max(0, hPx - 2), 10)
   }
 
   let sideBodyTopY = sy - hPx
@@ -3090,10 +3174,14 @@ function drawBlueprint(doc, payload) {
     doc.moveTo(sx, sideBodyTopY).lineTo(sx + depthPx, sy).strokeColor(C.thin).lineWidth(0.8).stroke()
     doc.moveTo(sx + depthPx, sideBodyTopY).lineTo(sx, sy).strokeColor(C.thin).lineWidth(0.8).stroke()
   }
+  if (!isPanelStyle && style !== "cage" && style !== "hoist" && style !== "lift") {
+    hiddenLine(sx + depthPx * 0.2, sy - hPx * 0.2, sx + depthPx * 0.8, sy - hPx * 0.2)
+  }
 
   const tx = topBox.x + (topBox.w - wPx) / 2
   const ty = topBox.y + (topBox.h + depthPx) / 2
   doc.rect(tx, ty - depthPx, wPx, depthPx).strokeColor(C.ink).lineWidth(1.6).stroke()
+  hatchRect(tx + 1, ty - depthPx + 1, Math.max(0, wPx - 2), Math.max(0, depthPx - 2), 11)
   const leg = Math.max(8, Math.min(16, depthPx * 0.12))
   if (style === "cage") {
     doc.moveTo(tx + wPx * 0.15, ty - depthPx * 0.2).lineTo(tx + wPx * 0.85, ty - depthPx * 0.2).strokeColor(C.ink).lineWidth(1.3).stroke()
@@ -3120,6 +3208,8 @@ function drawBlueprint(doc, payload) {
     const openD = depthPx * 0.34
     doc.rect(tx + (wPx - openW) / 2, ty - depthPx + (depthPx - openD) / 2, openW, openD).strokeColor(C.thin).lineWidth(0.9).stroke()
   }
+  hiddenLine(tx + wPx * 0.5, ty - depthPx, tx + wPx * 0.5, ty)
+  hiddenLine(tx, ty - depthPx * 0.5, tx + wPx, ty - depthPx * 0.5)
 
   function ip(x, y, z, ox, oy, sxp = 0.9, syp = 0.45, szp = 1) {
     return { x: ox + (x - y) * sxp, y: oy + (x + y) * syp - z * szp }
@@ -3136,6 +3226,13 @@ function drawBlueprint(doc, payload) {
   const pG = ip(L, W, H, iox, ioy, iScale, iScale * 0.5, iScale)
   const pH = ip(0, W, H, iox, ioy, iScale, iScale * 0.5, iScale)
   const ln = (a, b, w = 1.2, col = C.ink) => doc.moveTo(a.x, a.y).lineTo(b.x, b.y).strokeColor(col).lineWidth(w).stroke()
+  // Fill visible isometric faces to avoid a pure stick-wire look.
+  doc.save()
+  doc.polygon([pE.x, pE.y], [pF.x, pF.y], [pG.x, pG.y], [pH.x, pH.y]).fillOpacity(0.12).fill("#CFC7AE")
+  doc.polygon([pB.x, pB.y], [pC.x, pC.y], [pG.x, pG.y], [pF.x, pF.y]).fillOpacity(0.08).fill("#B8B09A")
+  doc.polygon([pA.x, pA.y], [pB.x, pB.y], [pF.x, pF.y], [pE.x, pE.y]).fillOpacity(0.06).fill("#D9D1BA")
+  doc.fillOpacity(1)
+  doc.restore()
   if (style === "cage") {
     ln(pE, pF); ln(pF, pG); ln(pG, pH); ln(pH, pE, 1.2)
     ln(pA, pE); ln(pB, pF); ln(pC, pG); ln(pD, pH)
@@ -3178,21 +3275,30 @@ function drawBlueprint(doc, payload) {
   }
 
   function dimH(x1, x2, y, text) {
-    doc.moveTo(x1, y).lineTo(x2, y).strokeColor(C.thin).lineWidth(0.9).stroke()
-    doc.moveTo(x1, y - 5).lineTo(x1, y + 5).strokeColor(C.thin).lineWidth(0.9).stroke()
-    doc.moveTo(x2, y - 5).lineTo(x2, y + 5).strokeColor(C.thin).lineWidth(0.9).stroke()
-    doc.fillColor(C.ink).font("Helvetica").fontSize(10).text(text, (x1 + x2) / 2 - 22, y - 14, { width: 44, align: "center" })
+    doc.moveTo(x1, y).lineTo(x2, y).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.moveTo(x1, y - 8).lineTo(x1, y + 8).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(x2, y - 8).lineTo(x2, y + 8).strokeColor(C.thin).lineWidth(0.9).stroke()
+    drawArrowHead(x1, y, 0)
+    drawArrowHead(x2, y, Math.PI)
+    doc.rect((x1 + x2) / 2 - 24, y - 20, 48, 12).fillColor(C.paper).fill()
+    doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(9).text(text, (x1 + x2) / 2 - 22, y - 19, { width: 44, align: "center" })
   }
   function dimV(y1, y2, x, text) {
-    doc.moveTo(x, y1).lineTo(x, y2).strokeColor(C.thin).lineWidth(0.9).stroke()
-    doc.moveTo(x - 5, y1).lineTo(x + 5, y1).strokeColor(C.thin).lineWidth(0.9).stroke()
-    doc.moveTo(x - 5, y2).lineTo(x + 5, y2).strokeColor(C.thin).lineWidth(0.9).stroke()
-    doc.fillColor(C.ink).font("Helvetica").fontSize(10).text(text, x + 8, (y1 + y2) / 2 - 6)
+    doc.moveTo(x, y1).lineTo(x, y2).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.moveTo(x - 8, y1).lineTo(x + 8, y1).strokeColor(C.thin).lineWidth(0.9).stroke()
+    doc.moveTo(x - 8, y2).lineTo(x + 8, y2).strokeColor(C.thin).lineWidth(0.9).stroke()
+    drawArrowHead(x, y1, Math.PI / 2)
+    drawArrowHead(x, y2, -Math.PI / 2)
+    doc.rect(x + 6, (y1 + y2) / 2 - 8, 38, 12).fillColor(C.paper).fill()
+    doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(9).text(text, x + 8, (y1 + y2) / 2 - 7)
   }
 
   dimH(fx, fx + wPx, fy + 26, `${L.toFixed(0)}"`)
   dimV(fy - hPx, fy, fx - 24, `${H.toFixed(0)}"`)
   dimH(sx, sx + depthPx, sy + 26, `${W.toFixed(0)}"`)
+  drawDatum(fx - 14, fy + 10, "A")
+  drawDatum(tx + wPx + 14, ty - depthPx + 10, "B")
+  drawDatum(sx + depthPx + 14, sy - hPx + 12, "C")
 
   doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("FRONT", frontBox.x + frontBox.w / 2 - 20, frontBox.y + frontBox.h - 18)
   doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(10).text("SIDE", sideBox.x + sideBox.w / 2 - 14, sideBox.y + sideBox.h - 18)
