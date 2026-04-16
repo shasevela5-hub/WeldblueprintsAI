@@ -3059,6 +3059,44 @@ function drawBlueprint(doc, payload) {
     doc.rect(fx + wPx * 0.1, yLow, wPx * 0.8, 10).strokeColor(C.ink).lineWidth(1.2).stroke()
     doc.moveTo(fx + wPx * 0.2, yLow + 10).lineTo(fx + wPx * 0.8, yTop).strokeColor(C.ink).lineWidth(1.4).stroke()
     doc.moveTo(fx + wPx * 0.8, yLow + 10).lineTo(fx + wPx * 0.2, yTop).strokeColor(C.ink).lineWidth(1.4).stroke()
+  } else if (style === "pit") {
+    const bodyW = wPx * 0.78
+    const bodyH = hPx * 0.5
+    const bodyX = fx + wPx * 0.1
+    const bodyY = fy - bodyH - hPx * 0.22
+    const fireboxW = wPx * 0.22
+    const fireboxH = bodyH * 0.62
+    const fireboxX = bodyX - fireboxW - 8
+    const fireboxY = bodyY + bodyH * 0.23
+    const stackW = Math.max(10, wPx * 0.08)
+    const stackH = hPx * 0.34
+    const stackX = bodyX + bodyW * 0.72
+    const stackY = bodyY - stackH + 2
+    const legTopY = bodyY + bodyH
+
+    doc.roundedRect(bodyX, bodyY, bodyW, bodyH, Math.max(12, bodyH * 0.22)).strokeColor(C.ink).lineWidth(1.6).stroke()
+    doc.rect(fireboxX, fireboxY, fireboxW, fireboxH).strokeColor(C.ink).lineWidth(1.4).stroke()
+    doc.rect(stackX, stackY, stackW, stackH).strokeColor(C.ink).lineWidth(1.3).stroke()
+    hiddenLine(bodyX + bodyW * 0.16, bodyY + bodyH * 0.5, bodyX + bodyW * 0.84, bodyY + bodyH * 0.5)
+    doc.moveTo(bodyX + bodyW * 0.5, bodyY).lineTo(bodyX + bodyW * 0.5, bodyY + bodyH).strokeColor(C.thin).lineWidth(0.8).stroke()
+    doc.moveTo(bodyX + bodyW * 0.14, legTopY).lineTo(bodyX + bodyW * 0.08, fy).strokeColor(C.ink).lineWidth(1.4).stroke()
+    doc.moveTo(bodyX + bodyW * 0.38, legTopY).lineTo(bodyX + bodyW * 0.32, fy).strokeColor(C.ink).lineWidth(1.4).stroke()
+    doc.moveTo(bodyX + bodyW * 0.62, legTopY).lineTo(bodyX + bodyW * 0.56, fy).strokeColor(C.ink).lineWidth(1.4).stroke()
+    doc.moveTo(bodyX + bodyW * 0.86, legTopY).lineTo(bodyX + bodyW * 0.8, fy).strokeColor(C.ink).lineWidth(1.4).stroke()
+    doc.moveTo(bodyX + bodyW * 0.08, fy).lineTo(bodyX + bodyW * 0.82, fy).strokeColor(C.thin).lineWidth(1).stroke()
+    doc.circle(bodyX + bodyW * 0.78, fy + 9, 9).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.circle(bodyX + bodyW * 0.58, fy + 9, 7).strokeColor(C.ink).lineWidth(1.1).stroke()
+  } else if (style === "pit") {
+    const bodyW = wPx * 0.74
+    const bodyD = depthPx * 0.66
+    const bodyX = tx + wPx * 0.12
+    const bodyY = ty - depthPx * 0.84
+    doc.roundedRect(bodyX, bodyY, bodyW, bodyD, Math.max(10, bodyD * 0.2)).strokeColor(C.ink).lineWidth(1.5).stroke()
+    doc.rect(bodyX - wPx * 0.14, bodyY + bodyD * 0.22, wPx * 0.14, bodyD * 0.56).strokeColor(C.ink).lineWidth(1.1).stroke()
+    doc.circle(bodyX + bodyW * 0.78, bodyY + bodyD + 16, 9).strokeColor(C.ink).lineWidth(1.1).stroke()
+    doc.circle(bodyX + bodyW * 0.56, bodyY + bodyD + 16, 7).strokeColor(C.ink).lineWidth(1.1).stroke()
+    hiddenLine(bodyX + bodyW * 0.5, bodyY + 2, bodyX + bodyW * 0.5, bodyY + bodyD - 2)
+    hiddenLine(bodyX + 2, bodyY + bodyD * 0.5, bodyX + bodyW - 2, bodyY + bodyD * 0.5)
   } else {
     doc.rect(fx, fy - hPx, wPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
     doc.moveTo(fx + wPx * 0.5, fy - hPx).lineTo(fx + wPx * 0.5, fy).strokeColor(C.thin).lineWidth(0.9).stroke()
@@ -3066,7 +3104,7 @@ function drawBlueprint(doc, payload) {
     hatchRect(fx + 1, fy - hPx + 1, Math.max(0, wPx - 2), Math.max(0, hPx - 2), 10)
   }
 
-  if (!isPanelStyle && !isBasinStyle && style !== "cage" && style !== "hoist" && style !== "lift") {
+  if (!isPanelStyle && !isBasinStyle && style !== "cage" && style !== "hoist" && style !== "lift" && style !== "pit") {
     const dz = Math.max(12, Math.min(34, depthRenderPx * 0.2))
     const rearX = fx + dz
     const rearY = fy - hPx - dz
@@ -3082,6 +3120,7 @@ function drawBlueprint(doc, payload) {
   if (style === "trailer" || style === "flatbed" || style === "rack" || style === "skid") frontBodyTopY = fy - hPx * 0.35
   if (style === "hoist") frontBodyTopY = fy - hPx * 0.88
   if (style === "lift") frontBodyTopY = fy - hPx * 0.72
+  if (style === "pit") frontBodyTopY = fy - hPx * 0.72
 
   for (let i = 1; i < visualProfile.frontDivisions; i += 1) {
     const x = fx + (wPx / visualProfile.frontDivisions) * i
@@ -3153,6 +3192,20 @@ function drawBlueprint(doc, payload) {
     doc.rect(sx + depthPx * 0.1, yLow, depthPx * 0.8, 8).strokeColor(C.ink).lineWidth(1.2).stroke()
     doc.moveTo(sx + depthPx * 0.2, yLow + 8).lineTo(sx + depthPx * 0.8, yTop).strokeColor(C.ink).lineWidth(1.3).stroke()
     doc.moveTo(sx + depthPx * 0.8, yLow + 8).lineTo(sx + depthPx * 0.2, yTop).strokeColor(C.ink).lineWidth(1.3).stroke()
+  } else if (style === "pit") {
+    const endDia = Math.min(depthPx * 0.72, hPx * 0.72)
+    const cx = sx + depthPx * 0.52
+    const cy = sy - hPx * 0.46
+    const stackW = Math.max(9, depthPx * 0.12)
+    const stackH = hPx * 0.4
+    doc.circle(cx, cy, endDia / 2).strokeColor(C.ink).lineWidth(1.6).stroke()
+    doc.circle(cx, cy, endDia * 0.33).strokeColor(C.thin).lineWidth(0.9).stroke()
+    hiddenLine(cx - endDia * 0.28, cy, cx + endDia * 0.28, cy)
+    hiddenLine(cx, cy - endDia * 0.28, cx, cy + endDia * 0.28)
+    doc.rect(cx + endDia * 0.28, cy - endDia * 0.46 - stackH, stackW, stackH).strokeColor(C.ink).lineWidth(1.3).stroke()
+    doc.rect(sx + depthPx * 0.08, sy - hPx * 0.24, depthPx * 0.24, hPx * 0.2).strokeColor(C.ink).lineWidth(1.1).stroke()
+    doc.moveTo(sx + depthPx * 0.26, sy - hPx * 0.08).lineTo(sx + depthPx * 0.2, sy).strokeColor(C.ink).lineWidth(1.2).stroke()
+    doc.moveTo(sx + depthPx * 0.72, sy - hPx * 0.08).lineTo(sx + depthPx * 0.66, sy).strokeColor(C.ink).lineWidth(1.2).stroke()
   } else {
     doc.rect(sx, sy - hPx, depthPx, hPx).strokeColor(C.ink).lineWidth(1.6).stroke()
     doc.moveTo(sx + depthPx * 0.2, sy - hPx * 0.55).lineTo(sx + depthPx * 0.8, sy - hPx * 0.55).strokeColor(C.thin).lineWidth(0.9).stroke()
@@ -3164,6 +3217,7 @@ function drawBlueprint(doc, payload) {
   if (style === "trailer" || style === "flatbed" || style === "rack" || style === "skid") sideBodyTopY = sy - hPx * 0.35
   if (style === "hoist") sideBodyTopY = sy - hPx * 0.85
   if (style === "lift") sideBodyTopY = sy - hPx * 0.70
+  if (style === "pit") sideBodyTopY = sy - hPx * 0.78
 
   for (let i = 1; i < visualProfile.sideDivisions; i += 1) {
     const x = sx + (depthPx / visualProfile.sideDivisions) * i
@@ -3174,7 +3228,7 @@ function drawBlueprint(doc, payload) {
     doc.moveTo(sx, sideBodyTopY).lineTo(sx + depthPx, sy).strokeColor(C.thin).lineWidth(0.8).stroke()
     doc.moveTo(sx + depthPx, sideBodyTopY).lineTo(sx, sy).strokeColor(C.thin).lineWidth(0.8).stroke()
   }
-  if (!isPanelStyle && style !== "cage" && style !== "hoist" && style !== "lift") {
+  if (!isPanelStyle && style !== "cage" && style !== "hoist" && style !== "lift" && style !== "pit") {
     hiddenLine(sx + depthPx * 0.2, sy - hPx * 0.2, sx + depthPx * 0.8, sy - hPx * 0.2)
   }
 
@@ -3208,8 +3262,10 @@ function drawBlueprint(doc, payload) {
     const openD = depthPx * 0.34
     doc.rect(tx + (wPx - openW) / 2, ty - depthPx + (depthPx - openD) / 2, openW, openD).strokeColor(C.thin).lineWidth(0.9).stroke()
   }
-  hiddenLine(tx + wPx * 0.5, ty - depthPx, tx + wPx * 0.5, ty)
-  hiddenLine(tx, ty - depthPx * 0.5, tx + wPx, ty - depthPx * 0.5)
+  if (style !== "pit") {
+    hiddenLine(tx + wPx * 0.5, ty - depthPx, tx + wPx * 0.5, ty)
+    hiddenLine(tx, ty - depthPx * 0.5, tx + wPx, ty - depthPx * 0.5)
+  }
 
   function ip(x, y, z, ox, oy, sxp = 0.9, syp = 0.45, szp = 1) {
     return { x: ox + (x - y) * sxp, y: oy + (x + y) * syp - z * szp }
@@ -3254,6 +3310,32 @@ function drawBlueprint(doc, payload) {
     const wh2 = ip(L * 0.75, -W * 0.06, 0, iox, ioy, iScale, iScale * 0.5, iScale)
     doc.circle(wh1.x, wh1.y + 8, 7).strokeColor(C.ink).lineWidth(1).stroke()
     doc.circle(wh2.x, wh2.y + 8, 7).strokeColor(C.ink).lineWidth(1).stroke()
+  } else if (style === "pit") {
+    const b1 = ip(L * 0.12, W * 0.2, H * 0.3, iox, ioy, iScale, iScale * 0.5, iScale)
+    const b2 = ip(L * 0.86, W * 0.2, H * 0.3, iox, ioy, iScale, iScale * 0.5, iScale)
+    const b3 = ip(L * 0.86, W * 0.78, H * 0.3, iox, ioy, iScale, iScale * 0.5, iScale)
+    const b4 = ip(L * 0.12, W * 0.78, H * 0.3, iox, ioy, iScale, iScale * 0.5, iScale)
+    const t1 = ip(L * 0.12, W * 0.2, H * 0.62, iox, ioy, iScale, iScale * 0.5, iScale)
+    const t2 = ip(L * 0.86, W * 0.2, H * 0.62, iox, ioy, iScale, iScale * 0.5, iScale)
+    const t3 = ip(L * 0.86, W * 0.78, H * 0.62, iox, ioy, iScale, iScale * 0.5, iScale)
+    const t4 = ip(L * 0.12, W * 0.78, H * 0.62, iox, ioy, iScale, iScale * 0.5, iScale)
+    ln(b1, b2); ln(b2, b3); ln(b3, b4); ln(b4, b1)
+    ln(t1, t2); ln(t2, t3); ln(t3, t4); ln(t4, t1)
+    ln(b1, t1); ln(b2, t2); ln(b3, t3); ln(b4, t4)
+    const stackBase = ip(L * 0.68, W * 0.22, H * 0.62, iox, ioy, iScale, iScale * 0.5, iScale)
+    const stackTop = ip(L * 0.68, W * 0.22, H * 0.94, iox, ioy, iScale, iScale * 0.5, iScale)
+    ln(stackBase, stackTop, 1.4)
+    const fireA = ip(L * 0.0, W * 0.3, H * 0.34, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireB = ip(L * 0.12, W * 0.3, H * 0.34, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireC = ip(L * 0.12, W * 0.68, H * 0.34, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireD = ip(L * 0.0, W * 0.68, H * 0.34, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireE = ip(L * 0.0, W * 0.3, H * 0.54, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireF = ip(L * 0.12, W * 0.3, H * 0.54, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireG = ip(L * 0.12, W * 0.68, H * 0.54, iox, ioy, iScale, iScale * 0.5, iScale)
+    const fireH = ip(L * 0.0, W * 0.68, H * 0.54, iox, ioy, iScale, iScale * 0.5, iScale)
+    ln(fireA, fireB, 1); ln(fireB, fireC, 1); ln(fireC, fireD, 1); ln(fireD, fireA, 1)
+    ln(fireE, fireF, 1); ln(fireF, fireG, 1); ln(fireG, fireH, 1); ln(fireH, fireE, 1)
+    ln(fireA, fireE, 1); ln(fireB, fireF, 1); ln(fireC, fireG, 1); ln(fireD, fireH, 1)
   } else {
     ln(pA, pB); ln(pB, pC); ln(pC, pD); ln(pD, pA)
     ln(pE, pF); ln(pF, pG); ln(pG, pH); ln(pH, pE)
